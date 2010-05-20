@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+
+<navgroups product="ame">
+        <navgroup phrase="ame_title" hr="true" displayorder="15">
+                <navoption displayorder="10">
+                        <phrase>ame_settings</phrase>
+                        <link>ame.php?do=settings</link>
+                </navoption>
+				<navoption displayorder="10">
+                        <phrase>ame_display</phrase>
+                        <link>ame.php?do=display</link>
+                </navoption>
+                <navoption displayorder="10">
+                        <phrase>ame_addnew</phrase>
+                        <link>ame.php?do=edit</link>
+                </navoption>
+                <navoption displayorder="10">
+                        <phrase>ame_export</phrase>
+                        <link>ame.php?do=export</link>
+                </navoption>
+                <navoption displayorder="10">
+                        <phrase>ame_import</phrase>
+                        <link>ame.php?do=import</link>
+                </navoption>                                                
+                <navoption displayorder="10">
+                        <phrase>ame_tools</phrase>
+                        <link>ame.php?do=tools</link>
+                </navoption>
+        </navgroup>
+</navgroups>
