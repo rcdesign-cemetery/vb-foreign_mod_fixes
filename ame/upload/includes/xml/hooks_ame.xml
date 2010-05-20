@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
-
-<hooks>
-        <hooktype type="ame_hooks">
-                <hook>ame_convert_check</hook>
-                <hook>ame_prep_start</hook>
-                <hook>ame_prep_end</hook>
-        </hooktype>
-</hooks>
