@@ -1,0 +1,786 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<product productid="_vb_post_templates" active="1">
+	<title>DBT vB Post Templates</title>
+	<description>Allow users to create post templates and easily use them when posting.</description>
+	<version>1.5.1</version>
+	<url />
+	<versioncheckurl />
+	<apm_releasedate>0</apm_releasedate>
+	<apm_author />
+	<apm_relatedurl />
+	<apm_extrainfo />
+	<apm_extraedit />
+	<dependencies>
+		<dependency dependencytype="vbulletin" minversion="4.0.2" maxversion="" />
+	</dependencies>
+	<codes>
+		<code version="1.0.0">
+			<installcode><![CDATA[$db->query("CREATE TABLE `" . TABLE_PREFIX . "posttemplate` (
+  `pid` int(15) NOT NULL auto_increment,
+  `userid` int(15) NOT NULL default '0',
+  `parentid` int(15) NOT NULL default '0',
+  `type` enum('category','template') NOT NULL default 'category',
+  `title` varchar(255) NOT NULL,
+  `content` mediumtext NOT NULL,
+  PRIMARY KEY  (`pid`),
+  KEY `userid` (`userid`)
+) Type=MyISAM");]]></installcode>
+			<uninstallcode><![CDATA[$db->query("drop table `" . TABLE_PREFIX . "posttemplate`");
+$db->query("alter table `" . TABLE_PREFIX . "usergroup` drop vbpt_permissions");]]></uninstallcode>
+		</code>
+		<code version="1.5.0">
+			<installcode><![CDATA[$db->query("ALTER TABLE `" . TABLE_PREFIX . "usergroup` ADD `vbpt_permissions` INT( 10 ) UNSIGNED NOT NULL DEFAULT '6';");
+$db->query("ALTER TABLE `" . TABLE_PREFIX . "posttemplate` ADD `global` TINYINT( 2 ) UNSIGNED NOT NULL DEFAULT '0' AFTER `title`;");]]></installcode>
+			<uninstallcode />
+		</code>
+	</codes>
+	<templates>
+		<template name="editor_posttemplates" templatetype="template" date="1273534399" username="Deceptor" version="1.5.0"><![CDATA[<li class="popupmenu menubutton fonts nomouseover nohovermenu editormenu" id="{vb:raw editorid}_popup_posttemplate">
+	<div class="popupctrl"><div id="{vb:raw editorid}_postemplatefield">{vb:rawphrase post_templates}</div></div>
+	<ul class="editorpopupbody popupbody popuphover">
+		{vb:raw posttemplates}
+	</ul>
+</li>]]></template>
+		<template name="editor_posttemplates_js" templatetype="template" date="1273538564" username="Deceptor" version="1.5.0"><![CDATA[<script type="text/javascript" src="clientscript/dbtech_posttemplates.js"></script>
+<script type="text/javascript">
+<!--
+initialise_posttemplates('{vb:raw editorid}');
+-->
+</script>]]></template>
+		<template name="modifyposttemplates" templatetype="template" date="1273529312" username="Deceptor" version="1.5.0"><![CDATA[<form action="profile.php?do=pt_addtemplate" method="post">
+<input type="hidden" name="do" value="pt_addcategory" />
+<input type="hidden" name="s" value="{vb:raw session.sessionhash}" />
+<input type="hidden" name="securitytoken" value="{vb:raw bbuserinfo.securitytoken}" />
+<h2 class="blockhead">{vb:rawphrase manage_post_templates}</h2>
+<div class="block">
+	<div class="blockbody settings_form_border">
+	
+		<div class="blocksubhead">{vb:rawphrase manage_pt_categories}</div>
+		<div class="blockrow">
+			<input type="text" class="textbox" name="title" size="30" maxlength="40" />
+			<vb:if condition="$pt_cancreatedef">
+				{vb:rawphrase pt_defined_q} <input type="checkbox" name="global" value="1" />
+			</vb:if>
+			<input type="submit" class="button" value="{vb:rawphrase pt_add_category}" />
+		</div>
+	
+		<vb:if condition="!$items">
+			<div class="blocksubhead">{vb:rawphrase manage_pt_categories}</div>
+			<div class="blockrow">{vb:rawphrase pt_no_cats}</div>
+		</vb:if>
+
+		<vb:if condition="$items">
+			<div class="table" style="width: 100%;">
+				{vb:raw items}
+			</div>
+		</vb:if>
+	</div>
+	<div class="blockfoot actionbuttons settings_form_border">
+		<input type="submit" name="newtemplate" class="button" value="{vb:rawphrase pt_create_template}" />
+	</div>
+</div>
+</form>]]></template>
+		<template name="modifyposttemplates_category" templatetype="template" date="1273530772" username="Deceptor" version="1.5.0"><![CDATA[<div class="tr">
+	<div class="td blocksubhead" style="width: 60%;">{vb:raw category.title} <vb:if condition="$category['global']"><span class="shade">({vb:rawphrase pt_defined})</span></vb:if></div>
+	<div class="td blocksubhead" style="width: 40%;">[<a href="profile.php?{vb:raw session.sessionurl}do=pt_editcategory&amp;id={vb:raw category.pid}">{vb:rawphrase manage_pt_category}</a>]</div>
+</div>
+<vb:if condition="$bits">
+	{vb:raw bits}
+<vb:else />
+	<div class="tr">
+		<div class="td blockrow">{vb:rawphrase pt_no_temps_for_cat}</div>
+		<div class="td blockrow">&nbsp;</div>
+	</div>
+</vb:if>]]></template>
+		<template name="modifyposttemplates_editcategory" templatetype="template" date="1273530149" username="Deceptor" version="1.5.0"><![CDATA[<form action="profile.php?do=pt_handlecategory" method="post">
+<input type="hidden" name="do" value="pt_handlecategory" />
+<input type="hidden" name="id" value="{vb:raw category.pid}" />
+<input type="hidden" name="s" value="{vb:raw session.sessionhash}" />
+<input type="hidden" name="securitytoken" value="{vb:raw bbuserinfo.securitytoken}" />
+<div class="block">
+	<h2 class="blockhead">{vb:rawphrase manage_pt_category_x, {vb:raw category.title}}</h2>
+	<div class="blockbody settings_form_border">
+		<div class="blockrow">
+			<input value="{vb:raw category.title}" type="text" class="textbox" name="title" size="30" maxlength="40" />
+			<vb:if condition="$pt_cancreatedef">
+			{vb:rawphrase pt_defined_q} <input type="checkbox" name="global" value="1"<vb:if condition="$category['global']"> checked="checked"</vb:if> />
+			</vb:if>
+		</div>
+	</div>
+
+	<div class="blockfoot actionbuttons settings_form_border">
+		<input type="submit" class="button" value="{vb:rawphrase pt_update_category}" />
+		<input name="delete" type="submit" class="button" value="{vb:rawphrase pt_delete_category}" />
+	</div>
+</div>
+</form>]]></template>
+		<template name="modifyposttemplates_edittemplate" templatetype="template" date="1273529828" username="Deceptor" version="1.5.0"><![CDATA[<form action="profile.php?do=pt_handletemplate" method="post" name="vbform" onsubmit="return vB_Editor['{vb:raw editorid}'].prepare_submit(0)">
+<input type="hidden" name="do" value="pt_handletemplate" />
+<input type="hidden" name="id" value="{vb:raw template.pid}" />
+<input type="hidden" name="securitytoken" value="{vb:raw bbuserinfo.securitytoken}" />
+<input type="hidden" name="s" value="{vb:raw session.sessionurl}" />
+
+
+<div class="block">
+	<h2 class="blockhead">
+		<vb:if condition="$template[title]">
+			{vb:rawphrase manage_pt_template_x, {vb:raw template.title}}
+		<vb:else />
+			{vb:rawphrase pt_create_new_template}
+		</vb:if>
+	</h2>
+	<div class="blockbody settings_form_border">
+		<div class="table">
+			<div class="tr">
+				<div class="td blockrow">{vb:rawphrase pt_template_category}</div>
+				<div class="td blockrow"><select name="parentid">{vb:raw categories}</select></div>
+			</div>
+			<vb:if condition="$pt_cancreatedef">
+			<div class="tr">
+				<div class="td blockrow">{vb:rawphrase pt_defined_q}</div>
+				<div class="td blockrow"><input type="checkbox" name="global" value="1"<vb:if condition="$template['global']"> checked="checked"</vb:if> /></div>
+			</div>
+			</vb:if>
+			<div class="tr">
+				<div class="td blockrow">{vb:rawphrase pt_template_title}</div>
+				<div class="td blockrow"><input class="textbox" type="text" value="{vb:raw template.title}" name="title" size="30" maxlength="40" /></div>
+			</div>
+		</div>
+	</div>
+	
+	<div class="wysiwyg_block">
+		<div class="blockbody formcontrols">
+			{vb:raw messagearea}
+		</div>
+	</div>
+	
+	<div class="blockfoot actionbuttons settings_form_border">
+		<input type="submit" class="button" value="{vb:rawphrase save_changes}" accesskey="s" />
+		<input type="reset" class="button" value="{vb:rawphrase reset_fields}" accesskey="r" />
+		<vb:if condition="$template[title]">
+			<input name="delete" type="submit" class="button" value="{vb:rawphrase delete}" />
+		</vb:if>
+	</div>
+</div>
+</form>]]></template>
+		<template name="modifyposttemplates_template" templatetype="template" date="1273530792" username="Deceptor" version="1.5.0"><![CDATA[<div class="tr">
+	<div class="td blockrow">{vb:raw template.title} <vb:if condition="$template['global']"><span class="shade">({vb:rawphrase pt_defined})</span></vb:if></div>
+	<div class="td blockrow">[<a href="profile.php?{vb:raw session.sessionurl}do=pt_edittemplate&amp;id={vb:raw template.pid}">{vb:rawphrase manage_pt_template}</a>]</div>
+</div>]]></template>
+		<template name="usercp_nav_posttemplate" templatetype="template" date="1273522399" username="Deceptor" version="1.5.0"><![CDATA[<vb:if condition="$show['posttemplates']">
+<li>
+	<h3 class="blocksubhead"><img class="usercpimage" src="{vb:stylevar imgdir_siteicons}/forum.png" alt="{vb:rawphrase post_templates}" border="0" /> {vb:rawphrase post_templates}</h3>
+	<ul class="blockrow">
+		<li class="{vb:raw navclass.posttemplates}"><a href="profile.php?{vb:raw session.sessionurl}do=posttemplates">{vb:rawphrase manage_post_templates}</a></li>
+	</ul>
+</li>
+</vb:if>]]></template>
+	</templates>
+	<stylevardfns>
+	</stylevardfns>
+	<stylevars>
+	</stylevars>
+	<plugins>
+		<plugin active="1" executionorder="5">
+			<title>vB Post Templates: AJAX Fetch Post Template</title>
+			<hookname>ajax_complete</hookname>
+			<phpcode><![CDATA[if (!is_object($vbulletin))
+{
+        exit;
+}
+
+// Fetch vB Post Template Permissions
+$pt_canuse              = $vbulletin->userinfo['permissions']['vbpt_permissions'] & $vbulletin->bf_ugp_vbpt_permissions['vbpt_use'];
+$pt_canusedef           = $vbulletin->userinfo['permissions']['vbpt_permissions'] & $vbulletin->bf_ugp_vbpt_permissions['vbpt_use_defined'];
+
+if ($_POST['do'] == 'posttemplate' && ($pt_canuse || $pt_canusedef))
+{
+        $vbulletin->input->clean_array_gpc('p', array(
+                'wysiwyg'       => TYPE_BOOL,
+                'template'      => TYPE_INT,
+                'allowsmilie'   => TYPE_BOOL,
+        ));
+
+        $xml = new vB_AJAX_XML_Builder($vbulletin, 'text/xml');
+
+        $clause = array();
+
+        if ($pt_canuse)
+        {
+                $clause[] = 'userid=' . $vbulletin->userinfo['userid'];
+        }
+
+        if ($pt_canusedef)
+        {
+                $clause[] = 'global=1';
+        }
+
+        $clause = implode(' or ', $clause);
+
+        if (!$template = $vbulletin->db->query_first("select content from " . TABLE_PREFIX . "posttemplate where pid={$vbulletin->GPC['template']} and ($clause) and type='template'"))
+        {
+                $xml->add_tag('error', 'true');
+                $xml->print_xml();
+                exit;
+        }
+
+        $template = $template['content'];
+
+        if ($vbulletin->GPC['wysiwyg'])
+        {
+                require_once(DIR . '/includes/functions_wysiwyg.php');
+
+                $template = process_replacement_vars(parse_wysiwyg_html(htmlspecialchars_uni($template), false, $vbulletin->GPC['parsetype'], $vbulletin->GPC['allowsmilie']));
+        }
+
+        $xml->add_tag('message', $template);
+        $xml->print_xml();
+        exit;
+}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>vB Post Templates: Cache Templates</title>
+			<hookname>cache_templates</hookname>
+			<phpcode><![CDATA[if (!is_object($vbulletin))
+{
+        exit;
+}
+
+if ((THIS_SCRIPT == 'profile' && in_array($_REQUEST['do'], array('pt_addtemplate', 'pt_edittemplate'))) || defined('GET_EDIT_TEMPLATES') || in_array('showthread_quickreply', $cache) || CMS_SCRIPT)
+{
+        if (!defined('GET_EDIT_TEMPLATES'))
+        {
+                define('GET_EDIT_TEMPLATES', true);
+        }
+
+        $cache[] = 'editor_posttemplates';
+        $cache[] = 'editor_posttemplates_js';
+
+        if (CMS_SCRIPT && !in_array('vbcms_editor_toolbar_on', $cache))
+        {
+                $cache[] = 'vbcms_editor_toolbar_on';
+        }
+}
+
+if (THIS_SCRIPT == 'profile')
+{
+        $cache[] = 'modifyposttemplates';
+        $cache[] = 'modifyposttemplates_category';
+        $cache[] = 'modifyposttemplates_template';
+        $cache[] = 'modifyposttemplates_editcategory';
+        $cache[] = 'modifyposttemplates_edittemplate';
+}
+
+if (in_array('USERCP_SHELL', $cache))
+{
+        $cache[] = 'usercp_nav_posttemplate';
+}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>vB Post Templates: Integrate Into vB Editor</title>
+			<hookname>editor_toolbar_end</hookname>
+			<phpcode><![CDATA[if (!is_object($vbulletin))
+{
+	exit;
+}
+
+// Fetch vB Post Template Permissions
+$pt_canuse		= $vbulletin->userinfo['permissions']['vbpt_permissions'] & $vbulletin->bf_ugp_vbpt_permissions['vbpt_use'];
+$pt_canusedef		= $vbulletin->userinfo['permissions']['vbpt_permissions'] & $vbulletin->bf_ugp_vbpt_permissions['vbpt_use_defined'];
+
+if (($pt_canuse || $pt_canusedef) && !$vbulletin->GPC['ajax'] && (THIS_SCRIPT != 'profile' && !in_array($_REQUEST['do'], array('pt_addtemplate', 'pt_edittemplate'))))
+{
+
+	// Let's fetch our post templates!
+	$templates = array();
+	$categories = array();
+	$clause = array();
+	$posttemplates = array();
+
+	if ($pt_canuse)
+	{
+		$clause[] = 'userid=' . $vbulletin->userinfo['userid'];
+	}
+
+	if ($pt_canusedef)
+	{
+		$clause[] = 'global=1';
+	}
+
+	$clause = implode(' or ', $clause);
+
+	$get_templates = $vbulletin->db->query("select pid, parentid, type, title from " . TABLE_PREFIX . "posttemplate where $clause order by title");
+	while ($template = $vbulletin->db->fetch_array($get_templates))
+	{
+		if ($template['type'] == 'category')
+		{
+			$categories[] = $template;
+		}
+		else
+		{
+			$templates[] = $template;
+		}
+	}
+
+	foreach ($categories as $category)
+	{
+		$build = array();
+		$items = array();
+		$temps = false;
+
+		foreach ($templates as $template)
+		{
+			if ($template['parentid'] == $category['pid'])
+			{
+				$temps = true;
+				$items[] = '<li class="fontname" id="posttemplate~' . "{$template['pid']}~{$editorid}" . '"><a href="javascript://">' . $template['title'] . '</a></li>';
+			}
+		}
+
+		if (!$temps)
+		{
+			continue;
+		}
+
+		$posttemplates[] = '<li class="blocksubhead" style="white-space: nowrap;">' . $category['title'] . '</li>';
+
+		foreach ($items as $item)
+		{
+			$posttemplates[] = $item;
+		}
+	}
+
+	if (!empty($posttemplates))
+	{
+		$pt_options = vB_Template::create('editor_posttemplates');
+		$pt_options->register('posttemplates', implode('', $posttemplates));
+		$pt_options->register('editorid', $editorid);
+
+		$vbulletin->templatecache[$editor_template_name] = str_replace('<!-- POST_TEMPLATES -->', $pt_options->render(), $vbulletin->templatecache[$editor_template_name]);
+		$vbulletin->templatecache[$editor_template_name] .= $vbulletin->templatecache['editor_posttemplates_js'];
+		$vbulletin->templatecache[$editor_template_name] = str_replace("';\$final_rendered = '", "';\$final_rendered .= '", $vbulletin->templatecache[$editor_template_name]);
+	}
+}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>vB Post Templates: Integrate Into User CP</title>
+			<hookname>profile_start</hookname>
+			<phpcode><![CDATA[if (!is_object($vbulletin))
+{
+        exit;
+}
+
+// Fetch vB Post Template Permissions
+$pt_canuse              = $vbulletin->userinfo['permissions']['vbpt_permissions'] & $vbulletin->bf_ugp_vbpt_permissions['vbpt_use'];
+$pt_canusedef           = $vbulletin->userinfo['permissions']['vbpt_permissions'] & $vbulletin->bf_ugp_vbpt_permissions['vbpt_use_defined'];
+$pt_cancreate           = $vbulletin->userinfo['permissions']['vbpt_permissions'] & $vbulletin->bf_ugp_vbpt_permissions['vbpt_create'];
+$pt_cancreatedef        = $vbulletin->userinfo['permissions']['vbpt_permissions'] & $vbulletin->bf_ugp_vbpt_permissions['vbpt_create_defined'];
+$_pt_can_access         = $pt_canuse && ($pt_cancreate || $pt_cancreatedef);
+
+foreach (array('modifyposttemplates', 'modifyposttemplates_category', 'modifyposttemplates_template', 'modifyposttemplates_editcategory', 'modifyposttemplates_edittemplate') as $pt_template)
+{
+        vB_Template::preRegister($pt_template, array(
+                'pt_canuse'             => $pt_canuse,
+                'pt_canusedef'          => $pt_canusedef,
+                'pt_cancreate'          => $pt_cancreate,
+                'pt_cancreatedef'       => $pt_cancreatedef,
+        ));
+}
+
+if ($_REQUEST['do'] == 'posttemplates')
+{
+        if (!$_pt_can_access)
+        {
+                print_no_permission();
+        }
+
+        $navbits[''] = $vbphrase['manage_pt_templates'];
+
+        $html = '';
+        $categories = array();
+        $templates = array();
+
+        $ptdm =& datamanager_init('PostTemplates', $vbulletin);
+
+        // Do we have any categories?
+        $ptdm->set_info('type', 'category');
+        $ptdm->set_info('userid', $vbulletin->userinfo['userid']);
+
+        while ($category = $vbulletin->db->fetch_array($ptdm->fetch_data()))
+        {
+                $categories[] = $category;
+        }
+
+        // Do we have any templates?
+        $ptdm->set_info('type', 'template');
+
+        while ($template = $vbulletin->db->fetch_array($ptdm->fetch_data()))
+        {
+                $templates[] = $template;
+        }
+
+        foreach ($categories as $category)
+        {
+                $bits = '';
+
+                foreach ($templates as $template)
+                {
+                        if ($template['parentid'] == $category['pid'])
+                        {
+                                $bit_template = vB_Template::create('modifyposttemplates_template');
+                                $bit_template->register('template', $template);
+                                $bits .= $bit_template->render();
+                        }
+                }
+
+                $cat_template = vB_Template::create('modifyposttemplates_category');
+                $cat_template->register('bits', $bits);
+                $cat_template->register('category', $category);
+                $cat_template->register('html', $html);
+                $html .= $cat_template->render();
+        }
+
+        construct_usercp_nav('posttemplates');
+
+        $page_templater = vB_Template::create('modifyposttemplates');
+        $page_templater->register('items', $html);
+}
+
+if ($_REQUEST['do'] == 'pt_editcategory')
+{
+        if (!$_pt_can_access)
+        {
+                print_no_permission();
+        }
+
+        $vbulletin->input->clean_array_gpc('r', array(
+                'id'    => TYPE_INT,
+        ));
+
+        $ptdm =& datamanager_init('PostTemplates', $vbulletin);
+
+        $ptdm->set_info('type', 'category');
+        $ptdm->set_info('userid', $vbulletin->userinfo['userid']);
+        $ptdm->set_info('pid', $vbulletin->GPC['id']);
+        $ptdm->set_info('single', true);
+
+        $category = $ptdm->fetch_data();
+
+        $navbits['profile.php?' . $vbulletin->session->vars['sessionurl'] . 'do=posttemplates'] = $vbphrase['manage_pt_templates'];
+        $navbits[''] = construct_phrase($vbphrase['pt_edit_category_x'], $category['title']);
+
+        construct_usercp_nav('posttemplates');
+
+        $page_templater = vB_Template::create('modifyposttemplates_editcategory');
+        $page_templater->register('category', $category);
+}
+
+if ($_POST['do'] == 'pt_addcategory' && $_POST['newtemplate'])
+{
+        $_POST['do'] = $_REQUEST['do'] = 'pt_addtemplate';
+}
+
+if ($_POST['do'] == 'pt_addcategory')
+{
+        if (!$_pt_can_access)
+        {
+                print_no_permission();
+        }
+
+        $vbulletin->input->clean_array_gpc('p', array(
+                'title'         => TYPE_NOHTML,
+                'global'        => TYPE_INT,
+        ));
+
+        $ptdm =& datamanager_init('PostTemplates', $vbulletin);
+
+        $ptdm->set('userid', $vbulletin->userinfo['userid']);
+        $ptdm->set('type', 'category');
+        $ptdm->set('global', $vbulletin->GPC['global']);
+        $ptdm->set('title', $vbulletin->GPC['title']);
+
+        $ptdm->pre_save();
+        $ptdm->save();
+
+        $vbulletin->url = 'profile.php?' . $vbulletin->session->vars['sessionurl'] . 'do=posttemplates';
+
+        eval(print_standard_redirect('redirect_updatethanks'));
+}
+
+if ($_REQUEST['do'] == 'pt_addtemplate' || $_REQUEST['do'] == 'pt_edittemplate')
+{
+        if (!$_pt_can_access)
+        {
+                print_no_permission();
+        }
+
+        $vbulletin->input->clean_array_gpc('r', array(
+                'id'    => TYPE_INT,
+        ));
+
+        $navbits['profile.php?' . $vbulletin->session->vars['sessionurl'] . 'do=posttemplates'] = $vbphrase['manage_pt_templates'];
+
+        if ($_REQUEST['do'] == 'pt_edittemplate')
+        {
+                $ptdm =& datamanager_init('PostTemplates', $vbulletin);
+
+                $ptdm->set_info('type', 'template');
+                $ptdm->set_info('userid', $vbulletin->userinfo['userid']);
+                $ptdm->set_info('pid', $vbulletin->GPC['id']);
+                $ptdm->set_info('single', true);
+
+                $template = $ptdm->fetch_data();
+
+                $navbits[''] = construct_phrase($vbphrase['pt_edit_template_x'], $template['title']);
+        }
+        else
+        {
+                $template = array();
+
+                $navbits[''] = $vbphrase['pt_create_template'];
+        }
+
+        construct_usercp_nav('posttemplates');
+
+        require_once(DIR . '/includes/functions_editor.php');
+
+        $stylevar['messagewidth'] = $stylevar['messagewidth_usercp'];
+        $editorid = construct_edit_toolbar(
+                htmlspecialchars_uni($template['content']),
+                0,
+                'nonforum',
+                1
+        );
+
+        $categories = '';
+
+        if ($ptdm)
+        {
+                unset($ptdm);
+        }
+
+        $ptdm =& datamanager_init('PostTemplates', $vbulletin);
+
+        $ptdm->set_info('type', 'category');
+        $ptdm->set_info('userid', $vbulletin->userinfo['userid']);
+
+        while ($category = $vbulletin->db->fetch_array($ptdm->fetch_data()))
+        {
+                $optiontitle = $category['title'];
+                $optionvalue = $category['pid'];
+                $optionselected = $category['pid'] == $template['parentid'] ? 'selected="selected"' : '';
+
+                if ($category['global'])
+                {
+                        $optiontitle .= " ($vbphrase[pt_defined])";
+                }
+
+                $option = vB_Template::create('option');
+                $option->register('optiontitle', $optiontitle);
+                $option->register('optionvalue', $optionvalue);
+                $categories .= $option->render();
+        }
+
+        $page_templater = vB_Template::create('modifyposttemplates_edittemplate');
+        $page_templater->register('categories', $categories);
+        $page_templater->register('template', $template);
+        $page_templater->register('editorid', $editorid);
+        $page_templater->register('messagearea', $messagearea);
+}
+
+if ($_POST['do'] == 'pt_handlecategory')
+{
+        if (!$_pt_can_access)
+        {
+                print_no_permission();
+        }
+
+        $vbulletin->input->clean_array_gpc('p', array(
+                'title'         => TYPE_NOHTML,
+                'global'        => TYPE_INT,
+                'id'            => TYPE_INT,
+                'delete'        => TYPE_STR,
+        ));
+
+        $ptdm =& datamanager_init('PostTemplates', $vbulletin);
+
+        $ptdm->set_info('type', 'category');
+        $ptdm->set_info('userid', $vbulletin->userinfo['userid']);
+        $ptdm->set_info('pid', $vbulletin->GPC['id']);
+        $ptdm->set_info('single', true);
+
+        $ptdm->set_existing($ptdm->fetch_data());
+
+        if (!$vbulletin->GPC['delete'])
+        {
+                $ptdm->set('title', $vbulletin->GPC['title']);
+                $ptdm->set('global', $vbulletin->GPC['global']);
+
+                $ptdm->pre_save();
+                $ptdm->save();
+        }
+        else
+        {
+                $ptdm->delete();
+        }
+
+        $vbulletin->url = 'profile.php?' . $vbulletin->session->vars['sessionurl'] . 'do=posttemplates';
+
+        eval(print_standard_redirect('redirect_updatethanks'));
+}
+
+if ($_POST['do'] == 'pt_handletemplate')
+{
+        if (!$_pt_can_access)
+        {
+                print_no_permission();
+        }
+
+        $vbulletin->input->clean_array_gpc('p', array(
+                'title'         => TYPE_NOHTML,
+                'message'       => TYPE_STR,
+                'parentid'      => TYPE_INT,
+                'global'        => TYPE_INT,
+                'id'            => TYPE_INT,
+                'delete'        => TYPE_STR,
+                'wysiwyg'       => TYPE_BOOL,
+        ));
+
+        $add = true;
+
+        if ($vbulletin->GPC['wysiwyg'])
+        {
+                require_once(DIR . '/includes/functions_wysiwyg.php');
+
+                $vbulletin->GPC['message'] = convert_wysiwyg_html_to_bbcode($vbulletin->GPC['message']);
+        }
+
+        $ptdm =& datamanager_init('PostTemplates', $vbulletin);
+
+        if ($vbulletin->GPC['id'])
+        {
+                $add = false;
+
+                $ptdm->set_info('type', 'template');
+                $ptdm->set_info('userid', $vbulletin->userinfo['userid']);
+                $ptdm->set_info('pid', $vbulletin->GPC['id']);
+                $ptdm->set_info('single', true);
+
+                $ptdm->set_existing($ptdm->fetch_data());
+        }
+
+        if (!$vbulletin->GPC['delete'] || $add)
+        {
+                if ($add)
+                {
+                        $ptdm->set('userid',    $vbulletin->userinfo['userid']);
+                        $ptdm->set('type',      'template');
+                }
+
+                $ptdm->set('title',     $vbulletin->GPC['title']);
+                $ptdm->set('content',   $vbulletin->GPC['message']);
+                $ptdm->set('parentid',  $vbulletin->GPC['parentid']);
+                $ptdm->set('global',    $vbulletin->GPC['global']);
+
+                $ptdm->pre_save();
+                $ptdm->save();
+        }
+        else
+        {
+                $ptdm->delete();
+        }
+
+        $vbulletin->url = 'profile.php?' . $vbulletin->session->vars['sessionurl'] . 'do=posttemplates';
+
+        eval(print_standard_redirect('redirect_updatethanks'));
+}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="1">
+			<title>vB Post Templates: Add Navigation</title>
+			<hookname>usercp_nav_complete</hookname>
+			<phpcode><![CDATA[if (!is_object($vbulletin))
+{
+        exit;
+}
+
+$canuse         = $vbulletin->userinfo['permissions']['vbpt_permissions'] & $vbulletin->bf_ugp_vbpt_permissions['vbpt_use'];
+$cancreate      = $vbulletin->userinfo['permissions']['vbpt_permissions'] & $vbulletin->bf_ugp_vbpt_permissions['vbpt_create'];
+$cancreatedef   = $vbulletin->userinfo['permissions']['vbpt_permissions'] & $vbulletin->bf_ugp_vbpt_permissions['vbpt_create_defined'];
+
+if ($canuse && ($cancreate || $cancreatedef))
+{
+        $show['posttemplates'] = true;
+}
+
+$templater = vB_Template::create('usercp_nav_posttemplate');
+$templater->register('navclass', $navclass);
+$template_hook['usercp_navbar_bottom'] .= $templater->render();]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>vB Post Templates: User CP Nav Class</title>
+			<hookname>usercp_nav_start</hookname>
+			<phpcode><![CDATA[$cells[] = 'posttemplates';]]></phpcode>
+		</plugin>
+	</plugins>
+	<phrases>
+		<phrasetype name="Permissions" fieldname="cppermission">
+			<phrase name="pt_can_create_defined_pt" date="1273539934" username="Deceptor" version="1.5.0"><![CDATA[Can Create Global Post Templates
+<dfn>Global Post Templates will be available to all users who can use Global Post Templates.</dfn>]]></phrase>
+			<phrase name="pt_can_create_pt" date="1230498387" username="Deceptor" version="1.0.0"><![CDATA[Can Create Own Post Templates
+<dfn>This will allow the user the ability to create their own Post Templates.</dfn>]]></phrase>
+			<phrase name="pt_can_use_defined_pt" date="1273539954" username="Deceptor" version="1.5.0"><![CDATA[Can Use Global Post Templates
+<dfn>This will allow the user to use any Global Post Templates other users have created.</dfn>]]></phrase>
+			<phrase name="pt_can_use_pt" date="1230498361" username="Deceptor" version="1.0.0"><![CDATA[Can Use Post Templates
+<dfn>This will allow the user to use their own created Post Templates.</dfn>]]></phrase>
+			<phrase name="vbpt_permissions" date="1230490743" username="Deceptor" version="1.0.0"><![CDATA[vB Post Template Permissions]]></phrase>
+		</phrasetype>
+		<phrasetype name="Error Messages" fieldname="error">
+			<phrase name="cannot_create_global_posttemplate" date="1230492664" username="Deceptor" version="1.0.0"><![CDATA[You do not have permission to create Defined Post Templates.]]></phrase>
+			<phrase name="cannot_create_global_posttemplate_parent" date="1230496633" username="Deceptor" version="1.0.0"><![CDATA[You cannot create a Defined Post Template without assigning it to a Defined PT Category.]]></phrase>
+			<phrase name="invalid_posttemplate_category" date="1230339569" username="Deceptor" version="1.0.0"><![CDATA[The category you specified for the template does not exist.]]></phrase>
+			<phrase name="invalid_posttemplate_type" date="1230325720" username="Deceptor" version="1.0.0"><![CDATA[The post template type you specified was incorrect.]]></phrase>
+			<phrase name="posttemplate_item_invalid" date="1230331843" username="Deceptor" version="1.0.0"><![CDATA[The template or category you are trying to handle does not exist.]]></phrase>
+		</phrasetype>
+		<phrasetype name="GLOBAL" fieldname="global">
+			<phrase name="post_template" date="1230340972" username="Deceptor" version="1.0.0"><![CDATA[Post Template]]></phrase>
+			<phrase name="post_templates" date="1230341097" username="Deceptor" version="1.0.0"><![CDATA[Post Templates]]></phrase>
+		</phrasetype>
+		<phrasetype name="User Tools (global)" fieldname="user">
+			<phrase name="manage_post_templates" date="1230340139" username="Deceptor" version="1.0.0"><![CDATA[Manage Post Templates]]></phrase>
+			<phrase name="manage_pt_categories" date="1230340163" username="Deceptor" version="1.0.0"><![CDATA[Manage Categories]]></phrase>
+			<phrase name="manage_pt_category" date="1230340522" username="Deceptor" version="1.0.0"><![CDATA[Manage Category]]></phrase>
+			<phrase name="manage_pt_category_modify" date="1230340605" username="Deceptor" version="1.0.0"><![CDATA[To rename category, enter the name here then click Update Category. To delete, simply press Delete Category. <strong>Note:</strong> If you delete this category, all templates assigned to this category will also be deleted!]]></phrase>
+			<phrase name="manage_pt_category_x" date="1230340540" username="Deceptor" version="1.0.0"><![CDATA[Manage Post Template Category: {1}]]></phrase>
+			<phrase name="manage_pt_exist_categories_and_templates_x" date="1230515671" username="Deceptor" version="1.0.0"><![CDATA[Manage your existing Post Templates and Post Template Categories here. Current Categories: {1}, Current Templates: {2}]]></phrase>
+			<phrase name="manage_pt_exist_categories_x" date="1230340219" username="Deceptor" version="1.0.0"><![CDATA[Manage your existing Post Template categories here. Current Categories: {1}]]></phrase>
+			<phrase name="manage_pt_exist_templates_x" date="1230340251" username="Deceptor" version="1.0.0"><![CDATA[Manage your existing Post Templates here. Current Templates: {1}]]></phrase>
+			<phrase name="manage_pt_template" date="1230516184" username="Deceptor" version="1.0.0"><![CDATA[Manage Template]]></phrase>
+			<phrase name="manage_pt_template_x" date="1230340892" username="Deceptor" version="1.0.0"><![CDATA[Manage Post Template: {1}]]></phrase>
+			<phrase name="manage_pt_templates" date="1230340336" username="Deceptor" version="1.0.0"><![CDATA[Manage Post Templates]]></phrase>
+			<phrase name="pt_add_category" date="1230340312" username="Deceptor" version="1.0.0"><![CDATA[Add Category]]></phrase>
+			<phrase name="pt_add_category_desc" date="1230497442" username="Deceptor" version="1.0.0"><![CDATA[To add a category, enter the name here then click Add Category.]]></phrase>
+			<phrase name="pt_create_new_template" date="1230340871" username="Deceptor" version="1.0.0"><![CDATA[Create New Post Template]]></phrase>
+			<phrase name="pt_create_template" date="1230340399" username="Deceptor" version="1.0.0"><![CDATA[Create Template]]></phrase>
+			<phrase name="pt_create_template_desc" date="1230340384" username="Deceptor" version="1.0.0"><![CDATA[To create a new template, simply click Create Template.]]></phrase>
+			<phrase name="pt_defined" date="1273530822" username="Deceptor" version="1.5.0"><![CDATA[Global]]></phrase>
+			<phrase name="pt_defined_q" date="1273530829" username="Deceptor" version="1.5.0"><![CDATA[Global?]]></phrase>
+			<phrase name="pt_delete_category" date="1230340732" username="Deceptor" version="1.0.0"><![CDATA[Delete Category]]></phrase>
+			<phrase name="pt_edit_category_x" date="1230341541" username="Deceptor" version="1.0.0"><![CDATA[Edit Category: {1}]]></phrase>
+			<phrase name="pt_edit_template_x" date="1230341410" username="Deceptor" version="1.0.0"><![CDATA[Edit Template: {1}]]></phrase>
+			<phrase name="pt_no_cats" date="1230340418" username="Deceptor" version="1.0.0"><![CDATA[You do not have any categories, please add one above to get started.]]></phrase>
+			<phrase name="pt_no_temps_for_cat" date="1230515932" username="Deceptor" version="1.0.0"><![CDATA[There are no templates under this category.]]></phrase>
+			<phrase name="pt_template_category" date="1230340925" username="Deceptor" version="1.0.0"><![CDATA[Post Template Category]]></phrase>
+			<phrase name="pt_template_title" date="1230340948" username="Deceptor" version="1.0.0"><![CDATA[Post Template Title]]></phrase>
+			<phrase name="pt_update_category" date="1230340710" username="Deceptor" version="1.0.0"><![CDATA[Update Category]]></phrase>
+		</phrasetype>
+	</phrases>
+	<options>
+	</options>
+	<helptopics>
+	</helptopics>
+	<cronentries>
+	</cronentries>
+	<faqentries>
+	</faqentries>
+</product>

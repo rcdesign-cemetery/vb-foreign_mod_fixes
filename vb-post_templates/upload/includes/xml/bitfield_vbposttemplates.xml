@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<bitfields product="_vb_post_templates">
+	<bitfielddefs>
+		<group name="ugp">
+			<group name="vbpt_permissions">
+				<bitfield name="vbpt_use" group="vbpt_permissions" phrase="pt_can_use_pt">2</bitfield>
+				<bitfield name="vbpt_create" group="vbpt_permissions" phrase="pt_can_create_pt">4</bitfield>
+				<bitfield name="vbpt_create_defined" group="vbpt_permissions" phrase="pt_can_create_defined_pt">8</bitfield>
+				<bitfield name="vbpt_use_defined" group="vbpt_permissions" phrase="pt_can_use_defined_pt">16</bitfield>
+			</group>
+		</group>
+	</bitfielddefs>
+</bitfields>
