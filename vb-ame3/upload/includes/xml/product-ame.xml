@@ -54,6 +54,20 @@ $db->show_errors();]]></uninstallcode>
 	</stylevars>
 	<plugins>
 		<plugin active="1" executionorder="5">
+			<title>AME - Save flag for blog</title>
+			<hookname>blog_fpdata_postsave</hookname>
+			<phpcode><![CDATA[$blogtextid = intval($this->fetch_field($this->table == 'blog_text' ? 'blogtextid' : 'firstblogtextid'));
+require_once(DIR . '/includes/ame_prep.php');
+ame_save_flag($blogtextid);]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>AME - Save flag for blog comments</title>
+			<hookname>blog_textdata_postsave</hookname>
+			<phpcode><![CDATA[$blogtextid = intval($this->fetch_field($this->table == 'blog_text' ? 'blogtextid' : 'firstblogtextid'));
+require_once(DIR . '/includes/ame_prep.php');
+ame_save_flag($blogtextid);]]></phpcode>
+		</plugin>
+		<plugin active="0" executionorder="5">
 			<title>AME - Post Save</title>
 			<hookname>data_postsave</hookname>
 			<phpcode><![CDATA[require_once(DIR . '/includes/ame_prep.php');
@@ -66,12 +80,18 @@ ame_save_flag($this);]]></phpcode>
 $providers = ame_data_preparse($pagetext);]]></phpcode>
 		</plugin>
 		<plugin active="1" executionorder="5">
+			<title>AME - Save flag for SG</title>
+			<hookname>groupmessagedata_postsave</hookname>
+			<phpcode><![CDATA[require_once(DIR . '/includes/ame_prep.php');
+ame_save_flag($gmid);]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
 			<title><![CDATA[AME - Display Don't Auto Convert Option]]></title>
 			<hookname>parse_templates</hookname>
 			<phpcode><![CDATA[if ($vbulletin->templatecache['newpost_disablesmiliesoption'])
 	{
 		require_once(DIR . '/includes/ame_prep.php');
-		$ame = new AME_editor_prep($vbulletin, THIS_SCRIPT);			
+		$ame = new AME_editor_prep($vbulletin);			
 		$ame->add_template_injection(
 			array(
 				'type'		=> 'cache',
@@ -84,6 +104,12 @@ $providers = ame_data_preparse($pagetext);]]></phpcode>
 		$ame->do_template_injections();			
 		
 	}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>AME - Save flag for posts and threads</title>
+			<hookname>postdata_postsave</hookname>
+			<phpcode><![CDATA[require_once(DIR . '/includes/ame_prep.php');
+ame_save_flag($postid);]]></phpcode>
 		</plugin>
 	</plugins>
 	<phrases>

@@ -9,28 +9,47 @@
  * without explicit written permission from Samuel Sweet [samuel@sweetsquared.com]
  */
 
+define('AME_DEFAULT_ZONE_ID', 0);
+define('AME_FORUM_ZONE_ID', 1);
+define('AME_BLOG_POST_ZONE_ID', 2);
+define('AME_SG_ZONE_ID', 3);
+define('AME_CMS_ZONE_ID', 4);
+
+
+
 
 /**
  * Wrapper to handle flag saving
  *
- * @param datamanager	$dm
+ * @param int	$messageid
  */
-function ame_save_flag(&$dm)
+function ame_save_flag($messageid = null)
 {
-	
-	if (!is_object($dm->registry->AME))
+    if (class_exists("vB"))
+	{
+
+	    $reg = &vB::$vbulletin;
+
+	}
+	else
+	{
+
+	    global $vbulletin;
+	    $reg = &$vbulletin;
+
+	}
+
+	if (!is_object($reg->AME))
 	{
 	
 		require_once(DIR . '/includes/ame_prep.php');		
-		$dm->registry->AME	= new AME_message_prep($dm->registry);
-	
+		$reg->AME	= new AME_message_prep($reg);
 	}
-	
-	if ($dm->registry->AME->verify_db())
+
+	if ($reg->AME->verify_db())
 	{
-		
-		$dm->registry->AME->save_disabled_flag();
-			
+        $reg->AME->set_messageid($messageid);
+		$reg->AME->save_disabled_flag();
 	}
 	
 }
@@ -43,7 +62,7 @@ function ame_save_flag(&$dm)
  */
 function ame_data_preparse(&$pagetext)
 {
-	
+
 	if (class_exists("vB"))
 	{
 		
@@ -67,7 +86,7 @@ function ame_data_preparse(&$pagetext)
 	
 	if ($reg->AME->verify_db())
 	{
-		
+
 		$reg->AME->preparse($pagetext);
 		$providers = $reg->AME->info['providers'];
 		return $providers;
@@ -76,6 +95,100 @@ function ame_data_preparse(&$pagetext)
 	
 }
 
+/**
+ * Fetches and sets the $_zoneid to a constant to identify the section of the system
+ * -1 = unset, 1 = post, 2 = blog, 3 = group, 4 = CMS
+ *
+ * @return 	integer
+ */
+function fetch_zone_id()
+{
+
+	$zoneid = AME_DEFAULT_ZONE_ID;
+
+	switch (THIS_SCRIPT)
+	{
+
+		case 'newpost':
+        case 'newreply';
+		case 'editpost':
+		case 'newthread':
+
+			$zoneid = AME_FORUM_ZONE_ID;
+			break;
+
+		case 'blog_post':
+
+			$zoneid = AME_BLOG_POST_ZONE_ID;
+			break;
+
+		case 'group':
+
+			$zoneid = AME_SG_ZONE_ID;
+			break;
+
+		case 'vbcms':
+
+			$zoneid = AME_CMS_ZONE_ID;
+			break;
+
+	
+	}
+	return $zoneid;
+
+}
+
+/**
+ * sets and returns the current Messageid by clever guessing
+ * i.e. the blogid, postid, whatever. Used to help 'persist' the
+ * users option to disable auto AMEing the message
+ *
+ * @return 	integer
+ */
+function fetch_init_message_id()
+{
+    switch (THIS_SCRIPT)
+	{
+		case 'editpost':
+            global $postinfo;
+            $messageid = $postinfo['postid'];
+			break;
+
+		case 'blog_post':
+            global $blogtextinfo;
+
+            if (!empty($blogtextinfo))
+            {
+                // blog comments
+                $messageid = $blogtextinfo['blogtextid'];
+            }
+            else
+            {
+                // blog post
+                global $bloginfo;
+                $messageid = $bloginfo['firstblogtextid'];
+            }
+			break;
+
+		case 'group':
+            global $messageinfo;
+            $messageid = $messageinfo['gmid'];
+			break;
+
+        case 'vbcms':
+
+        case 'newthread':
+        case 'newpost':
+        case 'newthread':
+
+
+        default:
+
+    		$messageid = 0;
+
+	}
+    return (int)$messageid;
+}
 
 define("AME", true);
 
@@ -110,7 +223,7 @@ class AME_prep_base
 		
 	/**
 	 * If zone has a matching id (i.e. postid, blogid, etc...)
-	 * $_messageid should hold that number after calling fetch_message_id()
+	 * $_messageid should hold that number after calling fetch_init_message_id()
 	 *
 	 * @var 	integer
 	 */
@@ -122,13 +235,6 @@ class AME_prep_base
 	 * @var 	boolean
 	 */
 	protected	$_flag_disabled 	= false;
-		
-	/**
-	 * Was AME originally disabled by user for this message (i.e. this is an edit)
-	 *
-	 * @var unknown_type
-	 */
-	protected	$_flag_wasdisabled 	= false;
 		
 	/**
 	 * User previewing?
@@ -150,20 +256,36 @@ class AME_prep_base
 	 * @param 	object	$registry
 	 * @return AME_prep_base
 	 */
-	function AME_prep_base(&$registry)
+	function  __construct(&$registry)
 	{
 		
 		$this->_registry = $registry;
-		
+
+        $this->_registry->input->clean_array_gpc('r', array(
+        	'parseame_check'    => TYPE_BOOL,
+            'parseame' => TYPE_BOOL,
+        ));
 		/**
 		 * Calling code SHOULD set this, but why bother. Purists turn away now!
 		 */
+
+        /*
 		$this->_scriptname 			= THIS_SCRIPT;
 		$this->_flag_disabled		= isset($_POST['parseame_check']) ? empty($_POST['parseame']) : false;
 		$this->_flag_wasdisabled 	= isset($_POST['parseame_wasdisabled']);
 		$this->_preview_mode		= isset($_POST['preview']);
 		$this->_ajax				= isset($_POST['ajax']) || isset($_POST['advanced']);
-		
+		*/
+
+        $this->_scriptname 			= THIS_SCRIPT;
+        if ($this->_registry->GPC['parseame_check'])
+        {
+            $this->_flag_disabled		= !($this->_registry->GPC['parseame']);
+        }
+		$this->_preview_mode		= (bool)$this->_registry->GPC['preview'];
+		$this->_ajax				= ($this->_registry->GPC['ajax'] || $this->_registry->GPC['advanced']);
+        $this->_zoneid = fetch_zone_id();
+        $this->_messageid = fetch_init_message_id();
 	}
 	
 	/**
@@ -175,103 +297,8 @@ class AME_prep_base
 	{
 		return is_object($this->_registry->db);
 	}
-		
-	/**
-	 * Fetches and sets the $_zoneid to a constant to identify the section of the system
-	 * -1 = unset, 1 = post, 2 = blog, 3 = group, 4 = CMS
-	 * 
-	 * @return 	integer
-	 */
-	public function fetch_zone_id()
-	{
 
-		if ($this->_zoneid == -1)
-		{
-			
-			$zone = 0;
-			
-			switch ($this->_scriptname)
-			{
-				
-				case 'newpost':
-				case 'editpost':
-				case 'newthread':
-		
-					$this->_zoneid = 1;
-					break;
-					
-				case 'blog_post':
-					
-					$this->_zoneid = 2;
-					break;
-					
-				case 'group':
-					
-					$this->_zoneid = 3;
-					break;
-					
-				case 'vbcms':
-					
-					$this->_zoneid = 4;
-					break;
-					
-			}
-			
-			
-		}
-		
-		return $this->_zoneid;
-
-	}
-		
-	/**
-	 * sets and returns the current Messageid by clever guessing
-	 * i.e. the blogid, postid, whatever. Used to help 'persist' the
-	 * users option to disable auto AMEing the message
-	 *
-	 * @return 	integer
-	 */
-	public function fetch_message_id()
-	{
-		
-		if ($this->_messageid == -1)
-		{
-		
-			switch ($this->fetch_zone_id())
-			{
-				
-				case 1:
-					
-					$this->_messageid 	= $GLOBALS['postid'];
-					break;
-					
-				case 2:
-					
-					$this->_messageid 	= $GLOBALS['blogid'];
-					break;
-					
-				case 3:
-					
-					$this->_messageid 	= $GLOBALS['messageinfo']['gmid'] ? $GLOBALS['messageinfo']['gmid'] : $GLOBALS['dataman']->groupmessage['gmid'];
-					break;
-					
-				case 4:
-					
-					$this->_messageid = 0;
-					break;
-					
-				default:
-					
-					$this->_messageid = 0;
-					
-			}
-			
-		}
-		
-		return $this->_messageid;
-		
-	}
-		
+	
 	/**
 	 * Peeks into DB to see if user had previously disabled auto embedding
 	 * Data is stored as zoneid, messageid. If there is a match in the table,
@@ -283,9 +310,9 @@ class AME_prep_base
 	{
 		
 		$return 	= false;
-		$zone		= $this->fetch_zone_id();
-		$id			= $this->fetch_message_id();
-		
+		$zone		= $this->_zoneid;
+		$id			= $this->_messageid;
+
 		if ($this->_preview_mode)
 		{
 			
@@ -309,7 +336,11 @@ class AME_prep_base
 		return $return;
 		
 	}		
-		
+
+    public function set_messageid($messageid)
+    {
+        $this->_messageid = $messageid;
+    }
 }
 
 /**
@@ -332,19 +363,6 @@ class AME_editor_prep extends  AME_prep_base
 	 * 						
 	 */
 	protected 	$_template_injections	= array();
-		
-	/**
-	 * Constructor. Just pases on the registry object to parent class
-	 *
-	 * @param 	object $registry
-	 * @return AME_editor_prep
-	 */
-	function AME_editor_prep(&$registry)
-	{
-		
-		parent::AME_prep_base($registry);
-		
-	}
 		
 	/**
 	 * Adds an entry into the $_template_injections array
@@ -382,7 +400,7 @@ class AME_editor_prep extends  AME_prep_base
 				$marked		= 1;
 			
 			}
-			
+
 			foreach ($this->_template_injections as $value)
 			{
 				
@@ -429,18 +447,6 @@ class AME_message_prep extends AME_prep_base
 	 */
 	protected 	$_subbedinc = 0;
 		
-	/**
-	 * Constructor
-	 *
-	 * @param 	object	$registry
-	 * @return AME_message_prep
-	 */
-	function AME_message_prep($registry)
-	{
-		
-		parent::AME_prep_base($registry);		
-		
-	}		
 	
 	/**
 	 * Enter description here...
@@ -490,16 +496,13 @@ class AME_message_prep extends AME_prep_base
 	public function save_disabled_flag()
 	{
 		
-		$id 	= $this->fetch_message_id();
-		$zone	= $this->fetch_zone_id();
-		
+		$id 	= $this->_messageid;
+		$zone	= $this->_zoneid;
+
 		if ($id && $zone)
 		{
 			
-			$wasdisabled 	= $this->_flag_wasdisabled;
-			$isdisabled		= !$this->convert();
-			
-			if ($wasdisabled && !$isdisabled)
+			if ( $this->convert() )
 			{
 				
 				$sql = "DELETE FROM " . TABLE_PREFIX . "ame_disabled_posts WHERE typeid=$zone and id=$id";
