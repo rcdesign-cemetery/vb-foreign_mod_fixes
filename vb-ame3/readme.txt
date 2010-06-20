@@ -13,6 +13,8 @@ Fixed bugs:
 4. Inline editor caused reset "Automatically convert links into videos" parameter
    (wrong ajax parameters catch)
 
+5. Added Hook, no more vb patches required
+
 Other changes:
 --------------
 

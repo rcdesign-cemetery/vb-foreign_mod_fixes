@@ -67,6 +67,12 @@ ame_save_flag($blogtextid);]]></phpcode>
 require_once(DIR . '/includes/ame_prep.php');
 ame_save_flag($blogtextid);]]></phpcode>
 		</plugin>
+		<plugin active="1" executionorder="5">
+			<title><![CDATA[AME: Expand parse function for bbcode "video"]]></title>
+			<hookname>data_parse_bbcode_video</hookname>
+			<phpcode><![CDATA[require_once(DIR . '/includes/ame_prep.php');
+$providers = ame_data_preparse($pagetext);]]></phpcode>
+		</plugin>
 		<plugin active="0" executionorder="5">
 			<title>AME - Post Save</title>
 			<hookname>data_postsave</hookname>
