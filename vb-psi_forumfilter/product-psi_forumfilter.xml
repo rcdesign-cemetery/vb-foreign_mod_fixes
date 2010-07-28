@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<product productid="psi_forumfilter" active="1">
+	<title>Selective Forum Filter</title>
+	<description>Created By VisionScripts (www.visionscripts.com)</description>
+	<version>1.1.0</version>
+	<url><![CDATA[http://www.vbulletin.org/forum/misc.php?do=producthelp&pid=psi_forumfilter]]></url>
+	<versioncheckurl><![CDATA[http://www.vbulletin.org/forum/misc.php?do=productcheck&pid=psi_forumfilter]]></versioncheckurl>
+	<apm_releasedate></apm_releasedate>
+	<apm_author></apm_author>
+	<apm_relatedurl></apm_relatedurl>
+	<apm_extrainfo></apm_extrainfo>
+	<apm_extraedit></apm_extraedit>
+	<dependencies>
+	</dependencies>
+	<codes>
+		<code version="9.9.9">
+			<installcode><![CDATA[// hide errors
+$db->hide_errors();
+
+// create data structure
+$db->query_write("ALTER TABLE " . TABLE_PREFIX . "usertextfield ADD excludeforumids VARCHAR(255) NOT NULL");
+$db->query_write("ALTER TABLE " . TABLE_PREFIX . "forum ADD excludable INT( 10 ) UNSIGNED DEFAULT '0' NOT NULL");
+if (!$installed_version)
+{
+	$db->query_write("UPDATE " . TABLE_PREFIX . "forum SET excludable = 1");
+}
+
+// show errors
+$db->show_errors();
+
+// rebuild bitfields
+require_once(DIR . '/includes/class_bitfield_builder.php');
+if (vB_Bitfield_Builder::build(false) !== false)
+{
+	$myobj =& vB_Bitfield_Builder::init();
+	$myobj->save($db);
+	build_forum_permissions();
+}]]></installcode>
+			<uninstallcode><![CDATA[// hide errors
+$db->hide_errors();
+
+// drop data structure
+$db->query_write("ALTER TABLE " . TABLE_PREFIX . "usertextfield DROP excludeforumids");
+$db->query_write("ALTER TABLE " . TABLE_PREFIX . "forum DROP excludable");
+
+// show errors
+$db->show_errors();
+
+// rebuild bitfields
+require_once(DIR . '/includes/class_bitfield_builder.php');
+if (vB_Bitfield_Builder::build(false) !== false)
+{
+	$myobj =& vB_Bitfield_Builder::init();
+	$myobj->save($db);
+	build_forum_permissions();
+}]]></uninstallcode>
+		</code>
+	</codes>
+	<templates>
+		<template name="modifyoptions_excludeforums" templatetype="template" date="1278430121" username="DaniilM" version="1.1.0"><![CDATA[<div class="blockrow">
+	<label for="sel_excludeforumids">{vb:rawphrase exclude_forums_title}</label>
+	<p class="description" for="sel_excludeforumids">{vb:rawphrase exclude_forums_desc_1}<br/>{vb:rawphrase exclude_forums_desc_2}</p>
+	<select style="width: 100%" size="13" name="excludeforumids[]" id="sel_excludeforumids" multiple="multiple">
+		<option value="">{vb:rawphrase exclude_none}</option>
+		{vb:raw optoutforumbits}
+	</select>
+</div>]]></template>
+	</templates>
+	<stylevardfns>
+	</stylevardfns>
+	<stylevars>
+	</stylevars>
+	<plugins>
+		<plugin active="1" executionorder="5">
+			<title>SFF: Suppress Display of Excluded Forums</title>
+			<hookname>cache_ordered_forums</hookname>
+			<phpcode><![CDATA[$excludeforumids = explode(',', $vbulletin->userinfo['excludeforumids']); 
+		
+foreach ($excludeforumids AS $forumid) 
+{
+	if ($vbulletin->forumcache["$forumid"]['excludable'])
+	{
+		$vbulletin->forumcache["$forumid"]['displayorder'] = 0;
+	}
+}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>SFF: Cache Templates</title>
+			<hookname>cache_templates</hookname>
+			<phpcode><![CDATA[if (THIS_SCRIPT == 'profile')
+{
+        $cache[] = 'modifyoptions_excludeforums';
+}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>SFF: Admin Options</title>
+			<hookname>forumadmin_edit_form</hookname>
+			<phpcode><![CDATA[print_yes_no_row($vbphrase['exclude_excludable'], 'forum[excludable]', $forum['excludable']);]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>SFF: Define Valid Fields</title>
+			<hookname>forumdata_start</hookname>
+			<phpcode><![CDATA[$this->validfields['excludable'] = array(TYPE_BOOL, REQ_NO);]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>SFF: User Options</title>
+			<hookname>profile_editoptions_start</hookname>
+			<phpcode><![CDATA[function forum_accessible($forum, $forumperms)
+{
+	global $vbulletin;
+
+	if ($forum['displayorder'] == 0)
+	{
+		return false;
+	}
+	if (!$forum['excludable'])
+	{
+		return false;
+	}
+	if (!($forumperms & $vbulletin->bf_ugp_forumpermissions['canview']))
+	{
+		return false;
+	}
+	if (!($forumperms & $vbulletin->bf_ugp_forumpermissions['cansearch']))
+	{
+		return false;
+	}
+	if (!($forum['options'] & $vbulletin->bf_misc_forumoptions['active']))
+	{
+		return false;
+	}
+	if (!verify_forum_password($forum['forumid'], $forum['password'], false))
+	{
+		return false;
+	}
+/* VBSEO patch
+	if (trim($forum['link']))
+	{
+		return false;
+	}
+*/
+	return true;
+}
+
+function fetch_excludeforumids_array($parentid = -1, $depthmark = '')
+{
+	global $vbulletin, $sel_excludeforumids;
+	static $indexed_forum_cache;
+
+	if ($parentid == -1)
+	{
+		$sel_excludeforumids = array();
+		$indexed_forum_cache = array();
+
+		foreach ($vbulletin->forumcache as $forumid => $forum)
+		{
+			$indexed_forum_cache["$forum[parentid]"]["$forumid"] = $vbulletin->forumcache["$forumid"];
+		}
+	}
+
+	if (is_array($indexed_forum_cache["$parentid"]))
+	{
+		foreach ($indexed_forum_cache["$parentid"] as $forumid => $forum)
+		{
+			$forumperms =& $vbulletin->userinfo['forumpermissions']["$forumid"];
+
+			if (forum_accessible($forum, $forumperms))
+			{
+				$sel_excludeforumids[] = $forumid;
+
+				$vbulletin->forumcache["$forumid"]['depthmark'] = $depthmark;
+				fetch_excludeforumids_array($forumid, $depthmark . "--");
+			}
+		}
+	}
+}
+
+fetch_excludeforumids_array();
+
+$optoutforumbits = '';
+$excludeforumids = explode(',', $vbulletin->userinfo['excludeforumids']);
+
+foreach ($sel_excludeforumids AS $forumid)
+{
+	$forum =& $vbulletin->forumcache["$forumid"];
+	$forumperms =& $vbulletin->userinfo['forumpermissions']["$forumid"];
+
+	if (!forum_accessible($forum, $forumperms))
+	{
+		continue;
+	}
+    $optionclass = 'fjdpth' . (($forum['depth'] > 4) ? '4' : $forum['depth']);
+    $optionselected = '';
+    if (in_array($forumid, $excludeforumids))
+    {
+        $optionselected = 'selected="selected"';
+    }
+    $optiontitle = $forum['depthmark'] . ' ' . $forum['title_clean'];
+	$tmpl = vB_Template::create('option');
+	$tmpl->register('optionvalue', $forumid);
+	$tmpl->register('optionclass', $optionclass);
+	$tmpl->register('optionselected', $optionselected);
+	$tmpl->register('optiontitle', $optiontitle);
+	$optoutforumbits .= $tmpl->render();
+}
+$tmpl = vB_Template::create('modifyoptions_excludeforums');
+$tmpl->register('optoutforumbits', $optoutforumbits);
+$template_hook['usercp_options_other'] .= $tmpl->render();
+unset($tmpl);]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>SFF: Process User Selection</title>
+			<hookname>profile_updateoptions</hookname>
+			<phpcode><![CDATA[$vbulletin->input->clean_gpc('p', 'excludeforumids', TYPE_ARRAY);
+
+$excludeforumids = array();
+foreach ($vbulletin->GPC['excludeforumids'] as $excludeforumid)
+{
+	if ($vbulletin->forumcache[$excludeforumid]['excludable'])
+	{
+		$excludeforumids[] = $excludeforumid;
+	}
+}
+
+$userdata->usertextfield['excludeforumids'] = implode(',', $excludeforumids);]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>SFF: Exclude Forums From Search</title>
+			<hookname>search_start</hookname>
+			<phpcode><![CDATA[if ($_REQUEST['do'] == 'getnew')
+{
+    $vbulletin->input->clean_gpc('r', 'exclude', TYPE_NOHTML);
+
+    if (!$vbulletin->userinfo['userid'])
+    {
+        $vbulletin->userinfo['excludeforumids'] = '';
+    }
+
+    if ($vbulletin->GPC['exclude'])
+    {
+        $vbulletin->GPC['exclude'] = $vbulletin->GPC['exclude'] . ',' . $vbulletin->userinfo['excludeforumids'];
+    }
+    else
+    {
+        $vbulletin->GPC['exclude'] = $vbulletin->userinfo['excludeforumids'];
+    }
+}]]></phpcode>
+		</plugin>
+	</plugins>
+	<phrases>
+		<phrasetype name="Forum-Related" fieldname="forum">
+			<phrase name="exclude_excludable" date="1164302810" username="admin" version="1.0.2"><![CDATA[Can Be Excluded]]></phrase>
+		</phrasetype>
+		<phrasetype name="User Tools (global)" fieldname="user">
+			<phrase name="exclude_forums_desc_1" date="1164302810" username="admin" version="1.0.2"><![CDATA[Here you can select any number of forums to exclude from the forums list, from "get new" search and from "get daily" search.]]></phrase>
+			<phrase name="exclude_forums_desc_2" date="1164302810" username="admin" version="1.0.2"><![CDATA[To select multiple forums, press and hold CTRL key while clicking on the forum titles. To clear exclusion, select "Reset Exclusion" without holding CTRL key.]]></phrase>
+			<phrase name="exclude_forums_title" date="1164302810" username="admin" version="1.0.2"><![CDATA[Forums To Exclude From View]]></phrase>
+			<phrase name="exclude_none" date="1164302810" username="admin" version="1.0.2"><![CDATA[[Reset Exclusion]]]></phrase>
+		</phrasetype>
+	</phrases>
+	<options>
+	</options>
+	<helptopics>
+	</helptopics>
+	<cronentries>
+	</cronentries>
+	<faqentries>
+	</faqentries>
+	<templateedits>
+	</templateedits>
+</product>
