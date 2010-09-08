@@ -6,11 +6,11 @@
 	<version>1.1.0</version>
 	<url><![CDATA[http://www.vbulletin.org/forum/misc.php?do=producthelp&pid=psi_forumfilter]]></url>
 	<versioncheckurl><![CDATA[http://www.vbulletin.org/forum/misc.php?do=productcheck&pid=psi_forumfilter]]></versioncheckurl>
-	<apm_releasedate></apm_releasedate>
-	<apm_author></apm_author>
-	<apm_relatedurl></apm_relatedurl>
-	<apm_extrainfo></apm_extrainfo>
-	<apm_extraedit></apm_extraedit>
+	<apm_releasedate>0</apm_releasedate>
+	<apm_author />
+	<apm_relatedurl />
+	<apm_extrainfo />
+	<apm_extraedit />
 	<dependencies>
 	</dependencies>
 	<codes>
@@ -224,6 +224,22 @@ foreach ($vbulletin->GPC['excludeforumids'] as $excludeforumid)
 }
 
 $userdata->usertextfield['excludeforumids'] = implode(',', $excludeforumids);]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>SFF: remove list of excluded forums from search page title</title>
+			<hookname>search_complete</hookname>
+			<phpcode><![CDATA[if (isset($criteria))
+{
+    // Without this patch we will see garbage @ "what's new" page
+    $exclude_forum = $criteria->get_display_string('exclude_forum');
+    if (!is_null($exclude_forum))
+    {
+        $this->template->unregister('criteriaDisplay');
+        $criteria->add_display_strings('exclude_forum', NULL);
+        $display_string = array_filter($criteria->get_display_strings(), 'count');
+        $this->template->register('criteriaDisplay', implode('; ', $display_string));
+    }
+}]]></phpcode>
 		</plugin>
 		<plugin active="1" executionorder="5">
 			<title>SFF: Exclude Forums From Search</title>
