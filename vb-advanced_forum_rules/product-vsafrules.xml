@@ -1,0 +1,1347 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<product productid="vsafrules" active="1">
+	<title>VSa - Advanced Forum Rules</title>
+	<description>VSa - Advanced Forum Rules</description>
+	<version>5.0.1</version>
+	<url>http://www.vbulletin.org/forum/showthread.php?t=236069</url>
+	<versioncheckurl><![CDATA[http://www.vbulletin.org/forum/misc.php?do=productcheck&pid=vsafrules]]></versioncheckurl>
+	<apm_releasedate>0</apm_releasedate>
+	<apm_author />
+	<apm_relatedurl />
+	<apm_extrainfo />
+	<apm_extraedit />
+	<dependencies>
+	</dependencies>
+	<codes>
+		<code version="5.0">
+			<installcode><![CDATA[$vbulletin->db->hide_errors();
+		$vbulletin->db->query_write("
+			CREATE TABLE IF NOT EXISTS `". TABLE_PREFIX ."vsa_frules` (
+		    `id` INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+		    `name` VARCHAR(250) NOT NULL,
+			`rules` MEDIUMTEXT)
+	    ");
+   		$vbulletin->db->query_write("
+			INSERT INTO `". TABLE_PREFIX ."vsa_frules`
+			(id, name, rules)
+			VALUES (1, 'General Rules', '[LIST=1][*][b]All posts must be written in English.[/b]
+[*][color=red]Don\'t spam/abuse any other member via e-mail or Private Messages.[/color][/LIST]')
+		");
+
+	 	$vbulletin->db->query_write("ALTER TABLE `" . TABLE_PREFIX . "forum` ADD vsa_frules SMALLINT(3) DEFAULT '1' NOT NULL");
+		echo "<br /><center>Rebuilding Forum Permissions...</center>";
+		vbflush();
+		require_once(DIR . '/includes/adminfunctions.php');
+		build_forum_permissions();
+		$vbulletin->db->query_write("ALTER TABLE `" . TABLE_PREFIX . "user` ADD vsafrules_date INT(10) DEFAULT '0' NOT NULL");
+		$vbulletin->db->query_write("ALTER TABLE `" . TABLE_PREFIX . "user` ADD vsafrules_sets VARCHAR(20) DEFAULT '0' NOT NULL");
+		$vbulletin->db->show_errors();]]></installcode>
+			<uninstallcode><![CDATA[$vbulletin->db->hide_errors();
+		$vbulletin->db->query_write("DROP TABLE IF EXISTS " . TABLE_PREFIX . "vsa_frules");
+		$vbulletin->db->query_write("ALTER TABLE " . TABLE_PREFIX . "forum DROP vsa_frules");
+		$vbulletin->db->query_write("ALTER TABLE " . TABLE_PREFIX . "user DROP vsafrules_date");
+		$vbulletin->db->query_write("ALTER TABLE " . TABLE_PREFIX . "user DROP vsafrules_sets");
+		$vbulletin->db->show_errors();]]></uninstallcode>
+		</code>
+		<code version="5.0">
+			<installcode><![CDATA[$vbulletin->db->hide_errors();
+		if ($vbulletin->userinfo['vsaafr_read_status']!='')
+		{
+			echo "<br /><center>Updating Rules acceptance status...</center>";
+			vbflush();
+			$vbulletin->db->query_write("UPDATE " . TABLE_PREFIX . "user SET vsafrules_sets = 1, vsafrules_date = '" . TIMENOW . "' WHERE vsaafr_read_status = 1 ");
+			$vbulletin->db->query_write("ALTER TABLE " . TABLE_PREFIX . "user DROP vsaafr_read_status");
+		}
+
+		echo "<br /><center>Saving your old Rules...</center>";
+		vbflush();
+		$cybfr_getallrules = $vbulletin->db->query_read("
+			SELECT id, name, rules
+			FROM " . TABLE_PREFIX . "cyb_frules
+			ORDER BY id ASC
+		");
+		while ($cybfr_ruleset = $db->fetch_array($cybfr_getallrules))
+		{
+			if ($cybfr_ruleset['id']==1)
+			{
+				$vbulletin->db->query_write("UPDATE " . TABLE_PREFIX . "vsa_frules SET name = '" . $vbulletin->db->escape_string($cybfr_ruleset['name']) . "', rules = '" . $vbulletin->db->escape_string($cybfr_ruleset['rules']) . "' WHERE id = 1 ");
+			}
+			else
+			{
+				$vbulletin->db->query_write("
+					INSERT INTO ".TABLE_PREFIX."vsa_frules
+					(name, rules)
+					VALUES ('" . $vbulletin->db->escape_string($cybfr_ruleset['name']) . "', '" . $vbulletin->db->escape_string($cybfr_ruleset['rules']) . "')
+				");
+			}
+		}
+		$vbulletin->db->show_errors();]]></installcode>
+			<uninstallcode />
+		</code>
+	</codes>
+	<templates>
+		<template name="vsa_frules" templatetype="template" date="1284106580" username="ruseinov" version="5.0.1"><![CDATA[        {vb:stylevar htmldoctype}
+        <html xmlns="http://www.w3.org/1999/xhtml" dir="{vb:stylevar textdirection}" lang="{vb:stylevar languagecode}" id="vbulletin_html">
+        <head>
+            {vb:raw headinclude}
+            <title>{vb:raw vboptions.bbtitle} - {vb:rawphrase vsafrules_rules}</title>
+        </head>
+        <body>
+        {vb:raw header}
+        {vb:raw navbar}
+
+        <div class="blockrow" style="padding:0;">
+            <vb:if condition="($vboptions[vsafrules_fsetselector] AND ($vsafrules_fsetnr>1))">
+            <form action="" id="vsafr_fsetsel" name="vsafr_fsetsel" method="post">
+            <input type="hidden" name="securitytoken" value="{vb:raw bbuserinfo.securitytoken}" />
+            <div class="smallfont" style="margin-bottom:4px">
+                {vb:rawphrase vsafrules_morerules}: <select id="cfrset" name="cfrset" onchange="vsafr_fsetsel.submit();">{vb:raw vsafrules_setselector}</select>
+            </div>
+            </form>
+            </vb:if>
+
+            <vb:if condition="($vsafr_showaccform)">
+                <form action="misc.php?{vb:raw session.sessionurl}do=vsaafragree" name="agree_vsaafr" id="agree_vsaafr" method="post" onsubmit="return VSaFR_checkAgree();">
+                <input type="hidden" name="securitytoken" value="{vb:raw bbuserinfo.securitytoken}" />
+                <input type="hidden" name="cfrset" value="{vb:raw vsafr_rulestoaccept}" />
+
+                <div class="blocksubhead" style="background-color:#DEF3BD;color:black;text-align:center">
+                    {vb:rawphrase vsafrules_agree_note, {vb:raw bbuserinfo.username}}
+                </div>
+                <br />
+            </vb:if>
+
+            <div class="blockhead" style="height:16px;">
+                <vb:if condition="is_member_of($bbuserinfo, 6)">
+                <span style="float:{vb:stylevar right}">
+                    <a class="smallfont" style="float:{vb:stylevar right}" href="misc.php?{vb:raw session.sessionurl}do=vsaafr_mng">{vb:rawphrase vsafrules_manage}</a>
+                </span>
+                </vb:if>
+                {vb:rawphrase vsafrules_rules}
+            </div>
+
+            <vb:if condition="$vsafrules_showgeneral">
+                <div class="blocksubhead" align="{vb:stylevar left}" style="padding-{vb:stylevar right}:{vb:math {vb:stylevar padding}/2-1};"><a class="collapse" style="position:static" id="collapse_vsafr_genswitch" href="javascript:void(0);"><img src="{vb:stylevar imgdir_button}/collapse{vb:raw vbcollapse.collapseimg_vsafr_gsw}_40b.png" alt="" border="0" <vb:if condition="(($vboptions[vsafrules_gen_rules]==2) AND ($vsafrules_target_id!=''))">onclick="javascript:document.getElementById('vsafr_genswnote').style.display='none';"</vb:if> /></a>
+                {vb:raw vsafrules_general_name} <vb:if condition="(($vboptions[vsafrules_gen_rules]==2) AND ($vsafrules_target_id!=''))"><span id="vsafr_genswnote" class="shade">({vb:rawphrase vsafrules_collapsed})</span></vb:if>
+                </div>
+                <div id="vsafr_genswitch" class="blockrow restore" align="{vb:stylevar left}" style="{vb:raw vsafrules_style_general}">
+                    {vb:raw vsafrules_general_rules}
+                </div>
+            </vb:if>
+
+            <vb:if condition="$vsafrules_target_id">
+                <div class="blocksubhead" align="{vb:stylevar left}" style="padding-{vb:stylevar right}:{vb:math {vb:stylevar padding}/2-1};"><a class="collapse" style="position:static" id="collapse_vsafr_tarswitch" href="javascript:void(0);"><img src="{vb:stylevar imgdir_button}/collapse{vb:raw vbcollapse.collapseimg_vsafr_tsw}_40b.png" alt="" border="0" /></a>
+                {vb:raw vsafrules_target_name}
+                </div>
+                <div id="vsafr_tarswitch" class="blockrow restore" align="{vb:stylevar left}" style="{vb:raw vbcollapse.collapseobj_vsafr_tarswitch}">
+                    {vb:raw vsafrules_target_rules}
+                </div>
+            </vb:if>
+
+            <div class="blocksubhead" align="{vb:stylevar left}">
+                {vb:rawphrase vsafrules_note}
+            </div>
+
+            <vb:if condition="($vsafr_showaccform)">
+                <br />
+                <div class="blocksubhead" style="background-color:#DEF3BD;color:black;text-align:center">
+                    <input type="checkbox" id="cafr_agree" name="cafr_agree" value="1" />&nbsp;{vb:rawphrase vsafrules_iagree_note, {vb:raw vboptions.bbtitle}}&nbsp;&nbsp;<input type="submit" class="button" id="vsaafr_counter" name="vsaafr_counter" style="width:80px;" value="{vb:rawphrase submit}" />
+                </div>
+                </form>
+
+                <script language="JavaScript" type="text/javascript">
+                    function VSaFR_checkAgree() {
+                        if (document.agree_vsaafr.cafr_agree.checked)
+                        {
+                            return true;
+                        }
+                        else
+                        {
+                            alert("{vb:rawphrase vsafrules_not_agreed}");
+                            return false;
+                        }
+                    }
+                    <vb:if condition="($vboptions[vsafrules_time]>0)">
+                    vsa_ms = 0;
+                    vsa_s = {vb:raw vboptions.vsafrules_time};
+                    vsaafr_counter = fetch_object('vsaafr_counter');
+                    vsaafr_counter.disabled = true;
+                    vsaafr_counter.value = '{vb:raw vboptions.vsafrules_time}';
+                    function VSaFR_buttonCounter() {
+                        
+                        if (vsa_ms <= 0)
+                        {
+                            vsa_ms = 9;
+                            vsa_s -= 1;
+                        }
+                        if (vsa_s <= -1)
+                        {
+                            vsa_ms = 0;
+                            vsa_s += 1;
+                            vsaafr_counter.disabled = false;
+                            vsaafr_counter.value = "{vb:rawphrase submit}";
+                        } else {
+                            vsa_ms -= 1;
+                            vsaafr_counter.disabled = true;
+                            vsaafr_counter.value = vsa_s + "." + vsa_ms;
+                            setTimeout('VSaFR_buttonCounter();', 100);
+                        }
+                    }
+                    VSaFR_buttonCounter();
+                    </vb:if>
+                </script>
+            </vb:if>
+            <br />
+        </div>
+
+        {vb:raw footer}
+        </body>
+        </html>]]></template>
+		<template name="vsa_frules_addedit" templatetype="template" date="1271597136" username="Valter" version="5.0.1"><![CDATA[
+		{vb:stylevar htmldoctype}
+		<html xmlns="http://www.w3.org/1999/xhtml" dir="{vb:stylevar textdirection}" lang="{vb:stylevar languagecode}">
+		<head>
+			{vb:raw headinclude}
+			<title>{vb:raw vboptions.bbtitle} - <vb:if condition="($vsafr_getrule_set>0)">{vb:rawphrase vsafrules_edit}<vb:else />{vb:rawphrase vsafrules_add}</vb:if></title>
+		</head>
+		<body onload="document.getElementById('set_rules').focus();">
+		{vb:raw header}
+		{vb:raw navbar}
+
+		<form id="vsaafr_addedit" name="vsaafr_addedit" action="misc.php?{vb:raw session.sessionurl}do=vsaafr_doaddedit" method="post">
+		<input type="hidden" name="securitytoken" value="{vb:raw bbuserinfo.securitytoken}" />
+		<input type="hidden" name="set_id" value="{vb:raw vsafr_getrule.id}" />
+
+		<div class="blockrow" style="padding:0;">
+			<div class="blockhead" style="height:16px;font-weight:bold">
+				<a class="smallfont" style="float:{vb:stylevar right}" href="misc.php?{vb:raw session.sessionurl}do=vsaafr_mng">{vb:rawphrase vsafrules_manage}</a><vb:if condition="($vsafr_getrule_set>0)">{vb:rawphrase vsafrules_edit}<vb:else />{vb:rawphrase vsafrules_add}</vb:if>
+			</div>
+
+			<table cellpadding="0" cellspacing="0" border="0" width="100%" align="center">
+				<tr>
+					<td class="blocksubhead" align="{vb:stylevar left}" width="15%">{vb:rawphrase title}</td>
+					<td class="blocksubhead" align="{vb:stylevar left}" width="85%">{vb:rawphrase vsafrules_rules}</td>
+				</tr>
+				<tr class="alt1">
+					<td align="{vb:stylevar left}"><input type="text" name="set_name" id="set_name" value="{vb:raw vsafr_getrule.name}" class="primary textbox" style="width:90%" /></td>
+					<td align="{vb:stylevar left}" style="border-top:0px;border-bottom:0px;border-{vb:stylevar left}:1px;border-{vb:stylevar right}:0px;border-color:{vb:stylevar shade_color};border-style:dashed;"><textarea name="set_rules" id="set_rules" vlass="primary textbox" cols="50" rows="20" style="width:95%;border:0px">{vb:raw vsafr_getrule.rules}</textarea></td>
+				</tr>
+				<tr>
+					<td class="blocksubhead" align="center" colspan="2"><vb:if condition="(($vsafr_getrule_set>0) AND ($vsafr_getrule[id]!='1'))"><span style="float:{vb:stylevar left}"><input type="checkbox" name="set_del" id="set_del" value="1" /> {vb:rawphrase vsafrules_delete}</span></vb:if><input class="button" type="submit" name="vsaafr_send" value="{vb:rawphrase submit}" /></td>
+				</tr>
+			</table>
+		</div>
+
+		</form>
+		<br />
+		{vb:raw footer}
+		</body>
+		</html>]]></template>
+		<template name="vsa_frules_frms_bit" templatetype="template" date="1271597136" username="Valter" version="5.0.1"><![CDATA[
+		<tr>
+			<td class="blockrow" align="{vb:stylevar left}" nowrap="nowrap" style="border-top:0px;border-bottom:1px;border-{vb:stylevar left}:1px;border-{vb:stylevar right}:0px;border-color:{vb:stylevar shade_color};border-style:dashed;">{vb:raw vsafr_forum.title_clean} <vb:if condition="($vsafr_forum[replycount]>0)"><span class="smallfont"><span class="time">({vb:raw vsafr_forum.threadcount}/{vb:raw vsafr_forum.replycount})</span></span></vb:if></td>
+			<td class="blockrow" align="{vb:stylevar left}" nowrap="nowrap" style="border-top:0px;border-bottom:1px;border-{vb:stylevar left}:1px;border-{vb:stylevar right}:0px;border-color:{vb:stylevar shade_color};border-style:dashed;">{vb:raw vsafr_forum.name}</td>
+			<td class="blockrow" align="center" style="border-top:0px;border-bottom:1px;border-{vb:stylevar left}:1px;border-{vb:stylevar right}:1px;border-color:{vb:stylevar shade_color};border-style:dashed;"><input type="checkbox" name="forum_id[{vb:raw vsafr_id}]" id="forum_id[{vb:raw vsafr_id}]" value="{vb:raw vsafr_id}" /></td>
+		</tr>]]></template>
+		<template name="vsa_frules_mng" templatetype="template" date="1271597136" username="Valter" version="5.0.1"><![CDATA[
+		{vb:stylevar htmldoctype}
+		<html xmlns="http://www.w3.org/1999/xhtml" dir="{vb:stylevar textdirection}" lang="{vb:stylevar languagecode}">
+		<head>
+			{vb:raw headinclude}
+			<title>{vb:raw vboptions.bbtitle} - {vb:rawphrase vsafrules_manage}</title>
+		</head>
+		<body>
+		{vb:raw header}
+		{vb:raw navbar}
+	
+		<div id="vsaafr_mngrules" class="blockrow" style="padding:0;display:{vb:raw vsafr_display_rules}">
+			<div class="blockhead" style="height:16px;font-weight:bold">
+				<vb:if condition="is_member_of($bbuserinfo, 6)">
+				<span style="float:{vb:stylevar right}">
+					<a style="float:{vb:stylevar right}" href="misc.php?{vb:raw session.sessionurl}do=vsaafr_addedit">{vb:rawphrase vsafrules_add}</a>
+				</span>
+				</vb:if>
+				<a style="text-decoration:underline;" href="javascript:void(0);" onclick="return VSa_SwitchCFRMNG('rules');">{vb:rawphrase vsafrules_manage}</a> | <a href="javascript:void(0);" onclick="return VSa_SwitchCFRMNG('forums');">{vb:rawphrase vsafrules_manage_forums}</a>
+			</div>
+			<table cellpadding="0" cellspacing="0" border="0" width="100%" align="center">
+				<tr>
+					<td class="blocksubhead" align="center" width="1%">#</td>
+					<td class="blocksubhead" align="{vb:stylevar left}">{vb:rawphrase title}</td>
+					<td class="blocksubhead" align="{vb:stylevar left}">{vb:rawphrase vsafrules_rules}</td>
+					<td class="blocksubhead" align="center" width="1%">{vb:rawphrase edit}/{vb:rawphrase delete}</td>
+				</tr>
+				{vb:raw vsa_frules_manage}
+			</table>
+		</div>
+
+		<div id="vsaafr_mngforums" class="blockrow" style="padding:0;display:{vb:raw vsafr_display_forums}">
+			<form id="vsaafr_setforum" name="vsaafr_setforum" action="misc.php?{vb:raw session.sessionurl}do=vsaafr_dosetforum" method="post">
+			<input type="hidden" name="securitytoken" value="{vb:raw bbuserinfo.securitytoken}" />
+			<div class="blockhead" style="height:16px;font-weight:bold">
+				<vb:if condition="is_member_of($bbuserinfo, 6)">
+				<span style="float:{vb:stylevar right}">
+					{vb:rawphrase vsafrules_setforum} <select id="rules_id" name="rules_id">{vb:raw vsafrules_list}</select> <input class="button" type="submit" name="vsaafr_sendf" value="{vb:rawphrase submit}" />
+				</span>
+				</vb:if>
+				<a href="javascript:void(0);" onclick="return VSa_SwitchCFRMNG('rules');">{vb:rawphrase vsafrules_manage}</a> | <a style="text-decoration:underline;" href="javascript:void(0);" onclick="return VSa_SwitchCFRMNG('forums');">{vb:rawphrase vsafrules_manage_forums}</a>
+			</div>
+			<table cellpadding="0" cellspacing="0" border="0" width="100%" align="center">
+				<tr>
+					<td class="blocksubhead" align="{vb:stylevar left}" width="50%">{vb:rawphrase forum} <span class="smallfont">({vb:rawphrase threads}/{vb:rawphrase posts})</span></td>
+					<td class="blocksubhead" align="{vb:stylevar left}" width="50%">{vb:rawphrase vsafrules_rules}</td>
+					<td class="blocksubhead" align="center"><input type="checkbox" name="vsafr_check_all" id="vsafr_check_all" value="" onclick="VSaChFRAll(this);" /></td>
+				</tr>
+				{vb:raw vsa_frules_forums}
+			</table>
+			</form>
+		</div>
+	
+		<script language="Javascript" type="text/javascript">
+			function VSaChFRAll(obj) {
+				arrInput = document.getElementsByTagName("input");
+				for (i=0; i<arrInput.length; i++) {
+					if (arrInput[i].type == 'checkbox') {
+						arrInput[i].checked = obj.checked;
+					}
+				}
+			}
+			function VSa_SwitchCFRMNG(target)
+			{
+				if (target=="rules")
+				{
+					document.getElementById("vsaafr_mngrules").style.display = "block";
+					document.getElementById("vsaafr_mngforums").style.display = "none";
+				}
+				if (target=="forums")
+				{
+					document.getElementById("vsaafr_mngrules").style.display = "none";
+					document.getElementById("vsaafr_mngforums").style.display = "block";
+				}
+			}
+		</script>
+		<br />
+		{vb:raw footer}
+		</body>
+		</html>]]></template>
+		<template name="vsa_frules_mng_bit" templatetype="template" date="1271597136" username="Valter" version="5.0.1"><![CDATA[
+		<tr>
+			<td class="blockrow" align="center" style="border-top:0px;border-bottom:1px;border-{vb:stylevar left}:1px;border-{vb:stylevar right}:0px;border-color:{vb:stylevar shade_color};border-style:dashed;">{vb:raw vsafrules_rowid}</td>
+			<td class="blockrow" align="{vb:stylevar left}" style="border-top:0px;border-bottom:1px;border-{vb:stylevar left}:1px;border-{vb:stylevar right}:0px;border-color:{vb:stylevar shade_color};border-style:dashed;">{vb:raw vsafr_rules.name} <vb:if condition="($vsafr_rules[id]==1)"><span class="smallfont"><br />({vb:rawphrase vsafrules_undeletable})</span></vb:if></td>
+			<td class="blockrow" align="{vb:stylevar left}" style="border-top:0px;border-bottom:1px;border-{vb:stylevar left}:1px;border-{vb:stylevar right}:0px;border-color:{vb:stylevar shade_color};border-style:dashed;"><div style="overflow:auto;height:100px;width:99%;">{vb:raw vsafr_rules.rules}</div></td>
+			<td class="blockrow" align="center" style="border-top:0px;border-bottom:1px;border-{vb:stylevar left}:1px;border-{vb:stylevar right}:1px;border-color:{vb:stylevar shade_color};border-style:dashed;"><a href="misc.php?{vb:raw session.sessionurl}do=vsaafr_addedit&amp;cfrset={vb:raw vsafr_rules.id}">{vb:rawphrase edit}</a></td>
+		</tr>]]></template>
+		<template name="vsa_frules_reset" templatetype="template" date="1271597136" username="Valter" version="5.0.1"><![CDATA[
+		{vb:stylevar htmldoctype}
+		<html xmlns="http://www.w3.org/1999/xhtml" dir="{vb:stylevar textdirection}" lang="{vb:stylevar languagecode}">
+		<head>
+			{vb:raw headinclude}
+			<title>{vb:raw vboptions.bbtitle} - {vb:rawphrase vsafrules_rules}</title>
+		</head>
+		<body>
+		{vb:raw header}
+		{vb:raw navbar}
+	
+		<form name="cfrreset" id="cfrreset" action="misc.php?{vb:raw session.sessionurl}do=cfrreset" method="post">
+		<input type="hidden" name="securitytoken" value="{vb:raw bbuserinfo.securitytoken}" />
+		<input type="hidden" name="cfrtset" value="{vb:raw cfr_tset}" />
+
+		<div class="blockrow" style="padding:0;">
+			<div class="blockhead" style="height:16px;font-weight:bold">
+				{vb:rawphrase vbulletin_message}
+			</div>
+
+			<div class="blockrow" style="text-align:center">
+				<vb:if condition="can_moderate()">
+					<vb:if condition="($afrresettype=='all')">
+						{vb:rawphrase vsafrules_reset_select}
+						<div class="blockrow" style="border-top:0px;border-bottom:1px;border-{vb:stylevar left}:0px;border-{vb:stylevar right}:0px;border-color:{vb:stylevar shade_color};border-style:dashed;">
+							<table cellpadding="0" cellspacing="0" border="0" align="center">
+								<tr>
+									<td align="{vb:stylevar left}">{vb:raw vsa_frules_rulesets}</td>
+								</tr>
+							</table>
+						</div>
+						{vb:rawphrase vsafrules_resetall_confirm}<input type="hidden" value="cfrall" name="resettype" />
+					</vb:if>
+					<vb:if condition="$afrresettype=='user'">
+						<vb:if condition="$cfr_tset==0">
+							{vb:raw vsafr_resetuserall_phrase}
+						<vb:else />
+							{vb:raw vsafr_resetusersel_phrase}
+						</vb:if><input type="hidden" value="cfruser" name="resettype" />
+					</vb:if>
+						<input type="hidden" value="{vb:raw cfr_tu}" name="cfrtu" />
+				<vb:else />
+						{vb:rawphrase may_not_have_sufficient_privileges}
+				</vb:if>
+			</div>
+
+			<vb:if condition="can_moderate()">
+			<div class="blocksubhead" style="text-align:center">
+				<input type="submit" class="button" value="&nbsp;{vb:rawphrase yes}&nbsp;" name="cfryes" />
+				<input onclick="javascript:history.go(-1)" class="button" type="button" value="&nbsp;{vb:rawphrase no}&nbsp;" name="cfrno" />
+			</div>
+			</vb:if>
+		</div>
+		</form>
+		<br />
+		{vb:raw footer}
+		</body>
+		</html>]]></template>
+		<template name="vsa_frules_usermenu" templatetype="template" date="1271597136" username="Valter" version="5.0.1"><![CDATA[
+	<div class="blockrow">
+		<vb:if condition="$vsa_frules_readsets">
+			<div class="popupmenu" style="float:{vb:stylevar left}">
+				<a href="javascript://" class="popupctrl" style="white-space:nowrap">{vb:rawphrase vsafrules_userstatus, {vb:raw vsa_frules_readdate}}</a>
+				<ul class="popupbody popuphover">
+					<li>{vb:rawphrase vsafrules_force_set}</li>
+					{vb:raw vsa_frules_readitems}
+				</ul>
+			</div>
+		<vb:else />
+			{vb:rawphrase vsafrules_notaccepted}
+		</vb:if>
+		<br />
+	</div>]]></template>
+	</templates>
+	<stylevardfns>
+	</stylevardfns>
+	<stylevars>
+	</stylevars>
+	<plugins>
+		<plugin active="1" executionorder="5">
+			<title>VSa - Advanced Forum Rules - CS</title>
+			<hookname>admin_options_processing</hookname>
+			<phpcode><![CDATA[
+		if (is_array($settings['vsafrules_enable_items']))
+		{
+			$settings['vsafrules_enable_items'] = implode(',', $settings['vsafrules_enable_items']);
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>VSa - Advanced Forum Rules - CT</title>
+			<hookname>cache_templates</hookname>
+			<phpcode><![CDATA[
+		if ($vbulletin->options['vsafrules_enable_global'] AND (THIS_SCRIPT=='misc'))
+		{
+			$cache = array_merge($cache, array('vsa_frules', 'vsa_frules_mng', 'vsa_frules_mng_bit', 'vsa_frules_frms_bit', 'vsa_frules_addedit', 'vsa_frules_reset', 'vsa_frules_usermenu'));
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>VSa - Advanced Forum Rules - FD</title>
+			<hookname>forumdisplay_start</hookname>
+			<phpcode><![CDATA[
+		if ($vbulletin->options['vsafrules_enable_global'] AND strstr($vbulletin->options['vsafrules_enable_items'], 'viewforums'))
+		{
+			if (!is_member_of($vbulletin->userinfo, explode(',', $vbulletin->options['vsafrules_excluded_groups'])) AND $vsafr_havenotaccepted)
+			{
+				$vsafr_redtoforum = $vbulletin->input->clean_gpc('r', 'f', TYPE_UINT);
+				vbsetcookie('vsafr_redtopage', 'forumdisplay.php?f='.$vsafr_redtoforum);
+				$vbulletin->url = 'misc.php?do=vsarules&amp;doredir=1&amp;cfrset='.$foruminfo['vsa_frules'];
+				eval(print_standard_redirect('redirect_vsafrules_accept_forum',1,1));
+			}
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title><![CDATA[VSa - Advanced Forum Rules - Link&Accept]]></title>
+			<hookname>global_start</hookname>
+			<phpcode><![CDATA[
+		if ($vbulletin->options['vsafrules_enable_global'])
+		{
+			$vsafr_locs = array("forumdisplay", "showthread", "newthread", "newreply", "sendmessage");
+			if (in_array(THIS_SCRIPT, $vsafr_locs))
+			{
+				$vbulletin->input->clean_gpc('c', COOKIE_PREFIX . 'cfrrs', TYPE_STR);
+				eval('$vsafr_checkaccepted = in_array($foruminfo[vsa_frules], array(' . $vbulletin->userinfo['vsafrules_sets'] . '));');
+				eval('$vsafr_checkaccepted_g = in_array($foruminfo[vsa_frules], array(' . $vbulletin->GPC[COOKIE_PREFIX . 'cfrrs'] . '));');
+				
+				$vsafr_havenotaccepted = false;
+				if ($vbulletin->userinfo['userid'] AND $foruminfo['vsa_frules']!=0 AND !in_array($foruminfo['vsa_frules'], array($vsafr_checkaccepted)))
+				{
+					$vsafr_havenotaccepted = true;
+				}
+				if (!$vbulletin->userinfo['userid'] AND $foruminfo['vsa_frules']!=0 AND !in_array($foruminfo['vsa_frules'], array($vsafr_checkaccepted_g)))
+				{
+					$vsafr_havenotaccepted = true;
+				}
+			
+				$vsaafr_forumruleslink = $foruminfo['vsa_frules'];
+				if ($vsaafr_forumruleslink<1)
+				{
+					$vsaafr_forumruleslink = 1;
+				}
+				$vbphrase['forum_rules_link'] = str_replace('showrules','vsarules&amp;cfrset='.$vsaafr_forumruleslink,$vbphrase['forum_rules_link']);
+			}
+	
+			if (($vbulletin->options['vsafrules_reg_rules']=='1') AND (THIS_SCRIPT=='register'))
+			{
+				$vbphrase['forum_rules_registration'] = '';
+				$vbulletin->db->hide_errors();
+				$vsafr_rules = $vbulletin->db->query_first("
+					SELECT id, name, rules
+					FROM " . TABLE_PREFIX . "vsa_frules AS vsa_frules
+					WHERE id = 1
+				");
+				if ($vbulletin->options['vsafrules_bb'])
+				{
+					require_once(DIR . '/includes/class_bbcode.php');
+					$cafr_parse_reg = new vB_BbCodeParser($vbulletin, fetch_tag_list());
+					$vbphrase['forum_rules_description'] = $cafr_parse_reg->do_parse($vsafr_rules['rules'],1, 1, 1, 1, 1);
+				}
+				else
+				{
+					$vbphrase['forum_rules_description'] = $vsafr_rules['rules'];
+				}
+				$vbulletin->db->show_errors();
+			}
+
+			if ($vbulletin->options['vsafrules_show_link'])
+			{
+				$vsa_frules_link .= '<li>';
+			}
+			$vsa_frules_link .= '<a href="'.$vbulletin->options['bburl'].'/misc.php?do=vsarules"';
+			if ($vbulletin->options['vsafrules_link_color']!='')
+			{
+				$vsa_frules_link .= ' style="color:'.$vbulletin->options['vsafrules_link_color'].'"';
+			}
+			$vsa_frules_link .= '>'.$vbphrase['vsafrules_rules'].'</a>';
+			if ($vbulletin->options['vsafrules_show_link'])
+			{
+				$vsa_frules_link .= '</li>';
+				$template_hook['navbar_end'] .= $vsa_frules_link;
+			}
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>VSa - Advanced Forum Rules - IR</title>
+			<hookname>infraction_update_complete</hookname>
+			<phpcode><![CDATA[
+		if ($vbulletin->options['vsafrules_enable_global'] AND $vbulletin->options['vsafrules_enable_infraction'])
+		{
+			$vbulletin->db->hide_errors();
+			$vsafr_tgtuser = $vbulletin->db->query_first("
+				SELECT userid, vsafrules_sets
+				FROM " . TABLE_PREFIX . "user AS user
+				WHERE userid = " . $vbulletin->GPC['userid'] . "
+			");
+			$vsafr_rulesaccepted = str_replace("1","",$vsafr_tgtuser['vsafrules_sets']);
+			$vsafr_rulesaccepted = str_replace(",,",",",$vsafr_rulesaccepted);
+			$vsafr_rulesaccepted = trim($vsafr_rulesaccepted, ',');
+			if (!$vsafr_rulesaccepted)
+			{
+				$vsafr_rulesaccepted = '0';
+			}
+
+			$vbulletin->db->query_write(" UPDATE " . TABLE_PREFIX . "user SET vsafrules_sets = " . $vsafr_rulesaccepted . " WHERE userid = " . $vbulletin->GPC['userid'] . " ");
+			$vbulletin->db->show_errors();
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>VSa - Advanced Forum Rules - MI</title>
+			<hookname>member_complete</hookname>
+			<phpcode><![CDATA[
+		if ($vbulletin->options['vsafrules_enable_global'] AND can_moderate())
+		{
+			$vbulletin->db->hide_errors();
+			$vsa_frules_readsets = $userinfo['vsafrules_sets'];
+			$vsafr_getrulesets = $vbulletin->db->query_read("
+				SELECT id, name
+				FROM " . TABLE_PREFIX . "vsa_frules AS vsa_frules
+				WHERE id IN ($vsa_frules_readsets)
+				ORDER BY id ASC
+			");
+			while ($vsafr_ruleset = $vbulletin->db->fetch_array($vsafr_getrulesets))
+			{
+				$vsa_frules_readitems .= "<li><a href=\"misc.php?$session[sessionurl]do=cfrresetuser&amp;tu=$userinfo[userid]&amp;tun=$userinfo[username]&amp;cfrset=".$vsafr_ruleset['id']."&amp;cfrsetn=".$vsafr_ruleset['name']."\" rel=\"nofollow\">".$vsafr_ruleset['name']."</a></li>";
+			}
+
+			$vsa_frules_readitems .= "<li><a href=\"misc.php?$session[sessionurl]do=cfrresetuser&amp;tu=$userinfo[userid]&amp;tun=$userinfo[username]&amp;cfrset=0&amp;cfrsetn=".$vbphrase['vsafrules_all']."\" rel=\"nofollow\">".$vbphrase['vsafrules_all']."</a></li>";
+
+			$vsa_frules_readdate = vbdate($vbulletin->options['dateformat'] . ', ' . $vbulletin->options['timeformat'], $userinfo['vsafrules_date']);
+
+			$vsa_frules_readsets = false;
+			if ($userinfo['vsafrules_sets']!='0')
+			{
+				$vsa_frules_readsets = true;
+			}
+
+			$templater = vB_Template::Create('vsa_frules_usermenu');
+			$templater->register('vsa_frules_readdate', $vsa_frules_readdate);
+			$templater->register('vsa_frules_readitems', $vsa_frules_readitems);
+			$templater->register('vsa_frules_readsets', $vsa_frules_readsets);
+			$vsa_frules_readmenu = $templater->render();
+
+			if ($vbulletin->options['vsafrules_show_resetmi'])
+			{
+				$template_hook['profile_sidebar_first'] .= $vsa_frules_readmenu;
+			}
+			$vbulletin->db->show_errors();
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>VSa - Advanced Forum Rules - RA</title>
+			<hookname>misc_start</hookname>
+			<phpcode><![CDATA[
+		if ($vbulletin->options['vsafrules_enable_global'])
+		{
+			require_once(DIR . '/includes/class_bbcode.php');
+			if ($_REQUEST['do'] == 'vsarules')
+			{
+				if ($_REQUEST['doredir'] != '1')
+				{
+					vbsetcookie('vsafr_redtopage', $_SERVER['HTTP_REFERER']);
+				}
+
+				$vsafr_requestedset = $vbulletin->input->clean_gpc('r', 'cfrset', TYPE_UINT);
+				if (!$vsafr_requestedset)
+				{
+					$vsafr_requestedset = 1;
+				}
+
+				$vsarulesforumperms = array();
+				if ($vbulletin->options['apboupc_global_enable'])
+				{
+					$vsarules_vsaapbopc_exclgroups = explode(",",$vbulletin->options['apboupc_forum_excludedgroups']);
+				}
+				foreach($vbulletin->forumcache AS $vsafrforum)
+				{
+					$vsarulesforumperms[$vsafrforum["forumid"]] = fetch_permissions($vsafrforum['forumid']);
+					if ((!($vsarulesforumperms[$vsafrforum["forumid"]] & $vbulletin->bf_ugp_forumpermissions['canview'])) OR (!($vsafrforum['options'] & $vbulletin->bf_misc_forumoptions['active']) AND !$vbulletin->options['showprivateforums'] AND !is_member_of($vbulletin->userinfo, 5,6,7)) OR ($vbulletin->options['apboupc_global_enable'] AND ($vsafrforum['accessf_nb']>$vbulletin->userinfo['posts']) AND !is_member_of($vbulletin->userinfo, $vsarules_vsaapbopc_exclgroups)))
+					{
+						$vsafrexclfids .= ','.$vsafrforum['forumid'];
+					}
+				}
+				$vsafrexclfids = substr($vsafrexclfids, 1);
+				if ($vsafrexclfids!='')
+				{
+					$vsafrexclfids = "WHERE forum.forumid NOT IN($vsafrexclfids) OR ISNULL(forum.forumid)";
+				}
+
+				$vbulletin->db->hide_errors();
+				$vsafr_getallrules = $vbulletin->db->query_read("
+					SELECT vsa_frules.id, vsa_frules.name, vsa_frules.rules, forum.forumid
+					FROM " . TABLE_PREFIX . "vsa_frules AS vsa_frules
+					LEFT JOIN " . TABLE_PREFIX . "forum AS forum ON (forum.vsa_frules = vsa_frules.id)
+					$vsafrexclfids
+					GROUP BY vsa_frules.id
+					ORDER BY vsa_frules.id ASC
+				");
+				$vsafrules_fsetnr = $vbulletin->db->num_rows($vsafr_getallrules);
+				while ($vsafr_ruleset = $vbulletin->db->fetch_array($vsafr_getallrules))
+				{
+					if ($vsafr_ruleset['id']==1)
+					{
+						$vsafrules_general_id = $vsafr_ruleset['id'];
+						$vsafrules_general_name = $vsafr_ruleset['name'];
+						$vsafrules_general_rules = $vsafr_ruleset['rules'];
+					}
+					if (($vsafr_ruleset['id']==$vsafr_requestedset) AND ($vsafr_requestedset!=1))
+					{
+						$vsafrules_target_id = $vsafr_ruleset['id'];
+						$vsafrules_target_name = $vsafr_ruleset['name'];
+						$vsafrules_target_rules = $vsafr_ruleset['rules'];
+					}
+					eval('$vsafrules_setselector .= " <option value=\"'.$vsafr_ruleset['id'].'\" " . iif($vsafr_requestedset==$vsafr_ruleset[id]," selected=\"selected\"","").">'.htmlspecialchars($vsafr_ruleset['name']).'</option> ";');
+				}
+
+				$vbulletin->db->show_errors();
+				if ($vbulletin->options['vsafrules_bb'])
+				{
+					$cafr_parse_rules = new vB_BbCodeParser($vbulletin, fetch_tag_list());
+					$vsafrules_general_rules = $cafr_parse_rules->do_parse($vsafrules_general_rules,1, 1, 1, 1, 1);
+					$vsafrules_target_rules = $cafr_parse_rules->do_parse($vsafrules_target_rules,1, 1, 1, 1, 1);
+				}
+
+				$vsafrules_showgeneral = true;
+				$vsafrules_acceptgeneral = true;
+				if (($vbulletin->options['vsafrules_gen_rules']==3) AND ($vsafrules_target_id!=''))
+				{
+					$vsafrules_showgeneral = false;
+				}
+
+				$vsafrules_style_general = '$vbcollapse[collapseobj_cybfrules_rsetg]';
+				if (($vbulletin->options['vsafrules_gen_rules']==2) AND ($vsafrules_target_id!=''))
+				{
+					$vsafrules_style_general = 'display:none';
+					$vsafrules_acceptgeneral = false;
+				}
+
+				if ($vsafrules_showgeneral AND $vsafrules_acceptgeneral)
+				{
+					$vsafr_rulestoaccept .= ",1";
+				}
+				if ($vsafrules_target_id)
+				{
+					$vsafr_rulestoaccept .= ",".$vsafrules_target_id;
+				}
+				$vsafr_rulestoaccept = substr($vsafr_rulestoaccept, 1);
+
+				eval('$vsafr_checkaccepted_form = in_array($vsafr_requestedset, array(' . $vbulletin->userinfo['vsafrules_sets'] . '));');
+
+				$vsafr_showaccform = false;
+				if (!in_array($vsafr_requestedset, array($vsafr_checkaccepted_form)) AND !is_member_of($vbulletin->userinfo, explode(',', $vbulletin->options['vsafrules_excluded_groups'])) AND (strstr($vbulletin->options['vsafrules_enable_items'], 'viewforums') OR strstr($vbulletin->options['vsafrules_enable_items'], 'postthreads') OR strstr($vbulletin->options['vsafrules_enable_items'], 'postreplies') OR strstr($vbulletin->options['vsafrules_enable_items'], 'sendpms')))
+				{
+					$vsafr_showaccform = true;
+				}
+
+				$navbits = construct_navbits(array('' => $vbphrase['vsafrules_rules']));
+				$navbar = render_navbar_template($navbits);
+
+				$templater = vB_Template::Create('vsa_frules');
+				$templater->register_page_templates();
+				$templater->register('navbar', $navbar);
+				$templater->register('vsafrules_fsetnr', $vsafrules_fsetnr);
+				$templater->register('vsafrules_setselector', $vsafrules_setselector);
+				$templater->register('vsafr_showaccform', $vsafr_showaccform);
+				$templater->register('vsafr_rulestoaccept', $vsafr_rulestoaccept);
+				$templater->register('vsafrules_showgeneral', $vsafrules_showgeneral);
+				$templater->register('vsafrules_general_name', $vsafrules_general_name);
+				$templater->register('vsafrules_general_rules', $vsafrules_general_rules);
+				$templater->register('vsafrules_style_general', $vsafrules_style_general);
+				$templater->register('vsafrules_target_id', $vsafrules_target_id);
+				$templater->register('vsafrules_target_name', $vsafrules_target_name);
+				$templater->register('vsafrules_target_rules', $vsafrules_target_rules);
+				$templater->register('vsacb_cantpost', $vsacb_cantpost);
+				print_output($templater->render());
+			}
+				
+			if (($_REQUEST['do'] == 'vsaafr_mng') AND $vbulletin->userinfo['userid'] AND is_member_of($vbulletin->userinfo,6))
+			{
+				$vbulletin->db->hide_errors();
+				$vsafr_getrules = $vbulletin->db->query_read("
+					SELECT id, name, rules
+					FROM " . TABLE_PREFIX . "vsa_frules AS vsa_frules
+					ORDER BY id ASC
+				");
+				while ($vsafr_rules = $vbulletin->db->fetch_array($vsafr_getrules))
+				{
+					$vsafrules_rowid += 1;
+					$vsafrules_list .= '<option value="'.$vsafr_rules['id'].'">'.$vsafr_rules['name'].'</option>';
+					if ($vbulletin->options['vsafrules_bb'])
+					{
+						$cafr_parse_mng = new vB_BbCodeParser($vbulletin, fetch_tag_list());
+						$vsafr_rules['rules'] = $cafr_parse_mng->do_parse($vsafr_rules['rules'],1, 1, 1, 1, 1);
+					}
+					$templater = vB_Template::Create('vsa_frules_mng_bit');
+					$templater->register('vsafrules_rowid', $vsafrules_rowid);
+					$templater->register('vsafr_rules', $vsafr_rules);
+					$vsa_frules_manage .= $templater->render();
+				}
+				$vsafrules_list .= '<option value="0">'.$vbphrase['none'].'</option>';
+
+				$vsafr_getforums = $vbulletin->db->query_read("
+					SELECT forum.forumid, forum.title_clean, forum.parentid, forum.displayorder, forum.vsa_frules, forum.threadcount, forum.replycount, vsa_frules.name
+					FROM " . TABLE_PREFIX . "forum AS forum
+					LEFT JOIN " . TABLE_PREFIX . "vsa_frules AS vsa_frules ON (vsa_frules.id = forum.vsa_frules)
+					ORDER BY parentid, displayorder, title_clean ASC
+				");
+				while ($vsafr_forum = $vbulletin->db->fetch_array($vsafr_getforums))
+				{
+					if ($vsafr_forum['parentid']=='-1')
+					{
+						$vsafrules_iscat = $vsafr_forum['forumid'];
+					}
+					if ($vsafr_forum['parentid']==$vsafrules_iscat)
+					{
+						$vsafr_forum['title_clean'] = '-- <a href="forumdisplay.php?f='.$vsafr_forum['forumid'].'">'.$vsafr_forum['title_clean'].'</a>';
+					}
+					else if ($vsafr_forum['parentid']!='-1')
+					{
+						$vsafr_forum['title_clean'] = '---- <a href="forumdisplay.php?f='.$vsafr_forum['forumid'].'">'.$vsafr_forum['title_clean'].'</a>';
+					}
+					else
+					{
+						$vsafr_forum['title_clean'] = '<a href="forumdisplay.php?f='.$vsafr_forum['forumid'].'">'.$vsafr_forum['title_clean'].'</a>';
+					}
+					$vsafr_id = $vsafr_forum['forumid'];
+					if (!$vsafr_forum['name'])
+					{
+						$vsafr_forum['name'] = $vbphrase['none'];
+					}
+
+					$templater = vB_Template::Create('vsa_frules_frms_bit');
+					$templater->register('vsafr_id', $vsafr_id);
+					$templater->register('vsafr_forum', $vsafr_forum);
+					$vsa_frules_forums .= $templater->render();
+				}
+				$vbulletin->db->show_errors();
+				
+				$vsafr_display_rules = "none";
+				$vsafr_display_forums = "none";
+				switch ($_REQUEST['at'])
+				{
+					case rs: $vsafr_display_rules = "block"; ; break;
+					case fs: $vsafr_display_forums = "block"; ; break;
+					default: $vsafr_display_rules = "block"; ; break;
+				}
+
+				$navbits = construct_navbits(array('' => $vbphrase['vsafrules_rules']));
+				$navbar = render_navbar_template($navbits);
+
+				$templater = vB_Template::Create('vsa_frules_mng');
+				$templater->register_page_templates();
+				$templater->register('navbar', $navbar);
+				$templater->register('vsafr_display_rules', $vsafr_display_rules);
+				$templater->register('vsa_frules_manage', $vsa_frules_manage);
+				$templater->register('vsafr_display_forums', $vsafr_display_forums);
+				$templater->register('vsafrules_list', $vsafrules_list);
+				$templater->register('vsa_frules_forums', $vsa_frules_forums);
+				print_output($templater->render());
+			}
+
+			if (($_REQUEST['do'] == 'vsaafr_addedit') AND $vbulletin->userinfo['userid'] AND is_member_of($vbulletin->userinfo,6))
+			{
+				$vsafr_getrule_set = $vbulletin->input->clean_gpc('r', 'cfrset', TYPE_UINT);
+				if ($vsafr_getrule_set>0)
+				{
+					$vbulletin->db->hide_errors();
+					$vsafr_getrule = $vbulletin->db->query_first("
+						SELECT id, name, rules
+						FROM " . TABLE_PREFIX . "vsa_frules AS vsa_frules
+						WHERE id = '" . $vbulletin->db->escape_string($vsafr_getrule_set) . "'
+					");
+					$vsafr_getrule['name'] = htmlspecialchars($vsafr_getrule['name']);
+					$vsafr_getrule['rules'] = htmlspecialchars($vsafr_getrule['rules']);
+					$vbulletin->db->show_errors();
+				}
+				$navbits = construct_navbits(array('' => $vbphrase['vsafrules_rules']));
+				$navbar = render_navbar_template($navbits);
+
+				$templater = vB_Template::Create('vsa_frules_addedit');
+				$templater->register_page_templates();
+				$templater->register('navbar', $navbar);
+				$templater->register('vsafr_getrule_set', $vsafr_getrule_set);
+				$templater->register('vsafr_getrule', $vsafr_getrule);
+				print_output($templater->render());
+			}
+
+			if (($_REQUEST['do'] == 'vsaafr_doaddedit') AND $vbulletin->userinfo['userid'] AND is_member_of($vbulletin->userinfo,6))
+			{
+				$vbulletin->db->hide_errors();
+				$vbulletin->input->clean_array_gpc('p', array(
+					'set_id' => TYPE_UINT,
+					'set_name' => TYPE_STR,
+					'set_rules' => TYPE_STR,
+					'set_del' => TYPE_UINT)
+				);
+				if ($vbulletin->GPC['set_id'])
+				{
+					if ($vbulletin->GPC['set_del']=='1')
+					{
+						$vbulletin->db->query_write(" DELETE FROM " . TABLE_PREFIX . "vsa_frules WHERE id = '" . $vbulletin->db->escape_string($vbulletin->GPC['set_id']) . "' ");
+					}
+					else
+					{
+						$vbulletin->db->query_write("UPDATE " . TABLE_PREFIX . "vsa_frules SET name = '" . $vbulletin->db->escape_string($vbulletin->GPC['set_name']) . "', rules = '" . $vbulletin->db->escape_string($vbulletin->GPC['set_rules']) . "' WHERE id = '" . $vbulletin->db->escape_string($vbulletin->GPC['set_id']) . "' ");
+					}
+				}
+				else
+				{
+					$vbulletin->db->query_write("
+						INSERT INTO `". TABLE_PREFIX ."vsa_frules`
+						(name, rules)
+						VALUES ('" . $vbulletin->db->escape_string($vbulletin->GPC['set_name']) . "', '" . $vbulletin->db->escape_string($vbulletin->GPC['set_rules']) . "')
+					");
+				}
+				$vbulletin->db->show_errors();
+				$vbulletin->url = 'misc.php?do=vsaafr_mng&amp;at=rs';
+				exec_header_redirect($vbulletin->url);
+			}
+
+			if (($_REQUEST['do'] == 'vsaafr_dosetforum') AND $vbulletin->userinfo['userid'] AND is_member_of($vbulletin->userinfo,6))
+			{
+				$vbulletin->db->hide_errors();
+				$vbulletin->input->clean_array_gpc('p', array(
+					'forum_id' => TYPE_ARRAY,
+					'rules_id' => TYPE_INT)
+				);
+				$vsaafr_forums = implode(',', $vbulletin->GPC['forum_id']);
+				if ($vsaafr_forums)
+				{
+					$vbulletin->db->query_write("UPDATE " . TABLE_PREFIX . "forum SET vsa_frules = '" . $vbulletin->GPC['rules_id'] . "' WHERE forumid IN ($vsaafr_forums) ");
+				}
+				$vbulletin->db->show_errors();
+				require_once(DIR . '/includes/adminfunctions.php');
+				build_forum_permissions();
+				$vbulletin->url = 'misc.php?do=vsaafr_mng&amp;at=fs';
+				exec_header_redirect($vbulletin->url);
+			}
+
+			if ($_REQUEST['do'] == 'vsaafragree')
+			{
+				$vbulletin->db->hide_errors();
+				$vsafr_rulesaccept = $vbulletin->input->clean_gpc('p', 'cfrset', TYPE_NOHTML);
+
+				if ($vbulletin->userinfo['userid'])
+				{
+					$vsafr_rulesaccepted = $vbulletin->userinfo['vsafrules_sets'].",".$vsafr_rulesaccept;
+				}
+				else
+				{
+					$vsafr_rulesaccepted = $_COOKIE[COOKIE_PREFIX . 'cfrrs'].",".$vsafr_rulesaccept;
+				}
+
+				$vsafr_rulesaccepted = explode(",",trim($vsafr_rulesaccepted, ','));
+				$vsafr_rulesaccepted = implode(",",array_unique($vsafr_rulesaccepted));
+				if (!$vsafr_rulesaccepted)
+				{
+					$vsafr_rulesaccepted = '0';
+				}
+
+				if ($vbulletin->userinfo['userid'])
+				{
+					$vbulletin->db->query_write(" UPDATE " . TABLE_PREFIX . "user SET vsafrules_sets = '".$vsafr_rulesaccepted."', vsafrules_date = '".TIMENOW."' WHERE userid = " . $vbulletin->userinfo['userid'] . " ");
+				}
+				else
+				{
+					vbsetcookie('cfrrs', $vsafr_rulesaccepted);
+				}
+
+				$vbulletin->input->clean_gpc('c', COOKIE_PREFIX . 'vsafr_redtopage', TYPE_NOHTML);
+				if ($vbulletin->GPC[COOKIE_PREFIX . 'vsafr_redtopage']!='')
+				{
+					$vbulletin->url = $vbulletin->GPC[COOKIE_PREFIX . 'vsafr_redtopage'];
+				}
+				else
+				{
+					$vbulletin->url = $vbulletin->options['homeurl'];
+				}
+				$vbulletin->db->show_errors();
+				exec_header_redirect($vbulletin->url);
+			}
+
+			if (($_REQUEST['do']=='cfrresetuser') OR ($_REQUEST['do']=='cfrresetall'))
+			{
+				if ($_REQUEST['do']=='cfrresetuser')
+				{
+					$afrresettype='user';
+				}
+				if ($_REQUEST['do']=='cfrresetall')
+				{
+					$afrresettype='all';
+					$vsafr_getrulesets = $vbulletin->db->query_read("
+						SELECT id, name
+						FROM " . TABLE_PREFIX . "vsa_frules AS vsa_frules
+						ORDER BY id ASC
+					");
+					while ($vsafr_ruleset = $vbulletin->db->fetch_array($vsafr_getrulesets))
+					{
+						$vsa_frules_rulesetid = $vsafr_ruleset['id'];
+						$vsa_frules_rulesets .= "<br /><input type=\"checkbox\" name=\"cfrdel[$vsa_frules_rulesetid]\" value=\"$vsa_frules_rulesetid\" /> ".$vsafr_ruleset['name'];
+					}	
+				}
+
+				$vbulletin->input->clean_array_gpc('r', array(
+					'tu' => TYPE_UINT,
+					'tun' => TYPE_NOHTML,
+					'cfrset' => TYPE_UINT,
+					'cfrsetn' => TYPE_NOHTML)
+				);
+				$cfr_tu = $vbulletin->GPC['tu'];
+				$cfr_tun = $vbulletin->GPC['tun'];
+				$cfr_tset = $vbulletin->GPC['cfrset'];
+				$cfr_tsetn = $vbulletin->GPC['cfrsetn'];
+
+				if ($cfr_tun=='')
+				{
+					$cfr_tu = '';
+				}
+				
+				$vsafr_resetuserall_phrase = construct_phrase($vbphrase['vsafrules_resetuser_confirmall'], $cfr_tun.' (ID:'.$cfr_tu.')', 'member.php?u='.$cfr_tu, $cfr_tsetn);
+				$vsafr_resetusersel_phrase = construct_phrase($vbphrase['vsafrules_resetuser_confirm'], $cfr_tun.' (ID:'.$cfr_tu.')', 'member.php?u='.$cfr_tu, $cfr_tsetn);
+
+				$navbits = construct_navbits(array('' => $vbphrase['vbulletin_message']));
+				$navbar = render_navbar_template($navbits);
+
+				$templater = vB_Template::Create('vsa_frules_reset');
+				$templater->register_page_templates();
+				$templater->register('navbar', $navbar);
+				$templater->register('cfr_tset', $cfr_tset);
+				$templater->register('afrresettype', $afrresettype);
+				$templater->register('vsa_frules_rulesets', $vsa_frules_rulesets);
+				$templater->register('cfr_tu', $cfr_tu);
+				$templater->register('vsafr_resetuserall_phrase', $vsafr_resetuserall_phrase);
+				$templater->register('vsafr_resetusersel_phrase', $vsafr_resetusersel_phrase);
+				print_output($templater->render());
+			}
+
+			if ($_REQUEST['do']=='cfrreset')
+			{
+				$vbulletin->input->clean_array_gpc('p', array(
+					'resettype' => TYPE_NOHTML,
+					'cfrtu' => TYPE_UINT,
+					'cfrtset' => TYPE_UINT)
+				);
+				if (($vbulletin->GPC['resettype']=='cfruser') AND ($vbulletin->GPC['cfrtu']!='') AND can_moderate())
+				{
+					$vbulletin->db->hide_errors();
+					if ($vbulletin->GPC['cfrtset']==0)
+					{
+						$vbulletin->db->query_write(" UPDATE " . TABLE_PREFIX . "user SET vsafrules_sets = '0', vsafrules_date = '0' WHERE userid = '" . $vbulletin->GPC['cfrtu'] . "' ");
+					}
+					else
+					{
+						$vsafr_tgtuser = $vbulletin->db->query_first("
+							SELECT userid, vsafrules_sets
+							FROM " . TABLE_PREFIX . "user AS user
+							WHERE userid = '".$vbulletin->GPC['cfrtu']."'
+						");
+						$vsafr_rulesaccepted = str_replace($vbulletin->GPC['cfrtset'],"",$vsafr_tgtuser['vsafrules_sets']);
+						$vsafr_rulesaccepted = str_replace(",,",",",$vsafr_rulesaccepted);
+						$vsafr_rulesaccepted = trim($vsafr_rulesaccepted, ',');
+						if (!$vsafr_rulesaccepted)
+						{
+							$vsafr_rulesaccepted = '0';
+						}
+			
+						$vbulletin->db->query_write(" UPDATE " . TABLE_PREFIX . "user SET vsafrules_sets = '".$vsafr_rulesaccepted."' WHERE userid = " . $vbulletin->GPC['cfrtu'] . " ");
+					}
+
+					$vbulletin->db->show_errors();
+					$vbulletin->url = 'member.php?u='.$vbulletin->GPC['cfrtu'];
+					eval(print_standard_redirect('redirect_vsafrules_resetdone_user',1,1));
+				}
+
+				if (($vbulletin->GPC['resettype']=='cfrall') AND is_member_of($vbulletin->userinfo,6))
+				{
+					$vbulletin->db->hide_errors();
+					$vbulletin->input->clean_gpc('r', 'cfrdel', TYPE_ARRAY);	
+					if ($vbulletin->GPC['cfrdel']!='')
+					{
+						foreach ($vbulletin->GPC['cfrdel'] AS $vsafr_rsetid)
+						{
+							$vbulletin->db->query_write(" UPDATE " . TABLE_PREFIX . "user SET vsafrules_sets = REPLACE(vsafrules_sets, $vsafr_rsetid, '0') ");
+						}
+					}
+
+					$vbulletin->db->show_errors();
+					$vbulletin->url = $vbulletin->config['Misc']['admincpdir'].'/options.php?do=options&amp;dogroup=vsafrules';
+					eval(print_standard_redirect('redirect_vsafrules_resetdone_all',1,1));
+				}
+
+				if ($vbulletin->GPC['resettype']=='')
+				{
+					exec_header_redirect($vbulletin->options['homeurl']);
+				}
+			}
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>VSa - Advanced Forum Rules - NR</title>
+			<hookname>newreply_start</hookname>
+			<phpcode><![CDATA[
+		if ($vbulletin->options['vsafrules_enable_global'] AND strstr($vbulletin->options['vsafrules_enable_items'], 'postreplies'))
+		{
+			$cafr_fperms = fetch_permissions($foruminfo['forumid']);
+			if ((($cafr_fperms & $vbulletin->bf_ugp_forumpermissions['canreplyothers']) OR ($cafr_fperms & $vbulletin->bf_ugp_forumpermissions['canreplyown'])) AND (!is_member_of($vbulletin->userinfo, explode(',', $vbulletin->options['vsafrules_excluded_groups']))) AND $vsafr_havenotaccepted)
+			{
+				$vbulletin->input->clean_array_gpc('r', array(
+					'p' => TYPE_UINT,
+					'noquote' => TYPE_UINT)
+				);
+				if ($vbulletin->GPC['noquote']==1)
+				{
+					$vsafr_redquote = '&noquote=1';
+				}
+				vbsetcookie('vsafr_redtopage', 'newreply.php?do=newreply&p='.$vbulletin->GPC['p'].$vsafr_redquote);
+				$vbulletin->url = 'misc.php?do=vsarules&amp;doredir=1&amp;cfrset='.$foruminfo['vsa_frules'];
+				eval(print_standard_redirect('redirect_vsafrules_accept_post',1,1));
+			}
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>VSa - Advanced Forum Rules - NT</title>
+			<hookname>newthread_start</hookname>
+			<phpcode><![CDATA[
+		if ($vbulletin->options['vsafrules_enable_global'] AND strstr($vbulletin->options['vsafrules_enable_items'], 'postthreads'))
+		{
+			$cafr_fperms = fetch_permissions($foruminfo['forumid']);
+			if (($cafr_fperms & $vbulletin->bf_ugp_forumpermissions['canpostnew']) AND (!is_member_of($vbulletin->userinfo, explode(',', $vbulletin->options['vsafrules_excluded_groups']))) AND $vsafr_havenotaccepted)
+			{
+				$vsafr_redtoforum = $vbulletin->input->clean_gpc('r', 'f', TYPE_UINT);
+				vbsetcookie('vsafr_redtopage', 'newthread.php?do=newthread&f='.$vsafr_redtoforum);
+				$vbulletin->url = 'misc.php?do=vsarules&amp;doredir=1&amp;cfrset='.$foruminfo['vsa_frules'];
+				eval(print_standard_redirect('redirect_vsafrules_accept_postthread',1,1));
+			}
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>VSa - Advanced Forum Rules - PMQR</title>
+			<hookname>private_complete</hookname>
+			<phpcode><![CDATA[
+		if ($vbulletin->options['vsafrules_enable_global'] AND strstr($vbulletin->options['vsafrules_enable_items'], 'sendpms'))
+		{
+			eval('$vsafr_checkaccepted_pm = in_array(1, array(' . $vbulletin->userinfo['vsafrules_sets'] . '));');
+			if (!is_member_of($vbulletin->userinfo, explode(',', $vbulletin->options['vsafrules_excluded_groups'])) AND !in_array(1, array($vsafr_checkaccepted_pm)))
+			{
+				$show['quickreply'] = false;
+			}
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>VSa - Advanced Forum Rules - PM</title>
+			<hookname>private_newpm_start</hookname>
+			<phpcode><![CDATA[
+		if ($vbulletin->options['vsafrules_enable_global'] AND strstr($vbulletin->options['vsafrules_enable_items'], 'sendpms'))
+		{
+			eval('$vsafr_checkaccepted_pm = in_array(1, array(' . $vbulletin->userinfo['vsafrules_sets'] . '));');
+			if (!is_member_of($vbulletin->userinfo, explode(',', $vbulletin->options['vsafrules_excluded_groups'])) AND !in_array(1, array($vsafr_checkaccepted_pm)))
+			{
+				$vbulletin->input->clean_array_gpc('r', array(
+					'u' => TYPE_UINT,
+					'pmid' => TYPE_UINT)
+				);
+				if ($vbulletin->GPC['u']!='')
+				{
+					$vsafr_redpmquote = '&u='.$vbulletin->GPC['u'];
+				}
+				if ($vbulletin->GPC['pmid']!='')
+				{
+					$vsafr_redpmquote = '&pmid='.$vbulletin->GPC['pmid'];
+				}
+				vbsetcookie('vsafr_redtopage', 'private.php?do=newpm'.$vsafr_redtopmuser.$vsafr_redpmquote);
+				$vbulletin->url = 'misc.php?do=vsarules&amp;doredir=1';
+				eval(print_standard_redirect('redirect_vsafrules_accept_pms',1,1));
+			}
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>VSa - Advanced Forum Rules - PM</title>
+			<hookname>sendmessage_start</hookname>
+			<phpcode><![CDATA[
+		if ($vbulletin->options['vsafrules_enable_global'] AND strstr($vbulletin->options['vsafrules_enable_items'], 'sendmails') AND ($_REQUEST['do']=='contactus' OR $_REQUEST['do']=='mailmember'))
+		{
+			eval('$vsafr_checkaccepted_mail = in_array(1, array(' . $vbulletin->userinfo['vsafrules_sets'] . '));');
+			eval('$vsafr_checkaccepted_mail_g = in_array(1, array(' . $vbulletin->GPC[COOKIE_PREFIX . 'cfrrs'] . '));');
+
+			$vsafr_havenotaccepted = false;
+			if ($vbulletin->userinfo['userid'] AND !in_array(1, array($vsafr_checkaccepted_mail)))
+			{
+				$vsafr_havenotaccepted = true;
+			}
+			if (!$vbulletin->userinfo['userid'] AND !in_array(1, array($vsafr_checkaccepted_mail_g)))
+			{
+				$vsafr_havenotaccepted = true;
+			}
+
+			if (!is_member_of($vbulletin->userinfo, explode(',', $vbulletin->options['vsafrules_excluded_groups'])) AND $vsafr_havenotaccepted)
+			{
+				$vsafr_redtomailuser = $vbulletin->input->clean_gpc('r', 'u', TYPE_UINT);
+				if ($vsafr_redtomailuser)
+				{
+					$vsafr_mailuser = '?do=mailmember&u='.$vsafr_redtomailuser;
+				}
+				vbsetcookie('vsafr_redtopage', 'sendmessage.php'.$vsafr_mailuser);
+				$vbulletin->url = 'misc.php?do=vsarules&amp;doredir=1';
+				eval(print_standard_redirect('redirect_vsafrules_accept_mails',1,1));
+			}
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>VSa - Advanced Forum Rules - QR</title>
+			<hookname>showthread_postbit_create</hookname>
+			<phpcode><![CDATA[
+		if ($vbulletin->options['vsafrules_enable_global'] AND strstr($vbulletin->options['vsafrules_enable_items'], 'postreplies'))
+		{
+			if (!is_member_of($vbulletin->userinfo, explode(',', $vbulletin->options['vsafrules_excluded_groups'])) AND $vsafr_havenotaccepted)
+			{
+				$show['quickreply'] = false;
+			}
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>VSa - Advanced Forum Rules - FD</title>
+			<hookname>showthread_start</hookname>
+			<phpcode><![CDATA[
+		if ($vbulletin->options['vsafrules_enable_global'] AND strstr($vbulletin->options['vsafrules_enable_items'], 'viewthreads'))
+		{
+			if (!is_member_of($vbulletin->userinfo, explode(',', $vbulletin->options['vsafrules_excluded_groups'])) AND $vsafr_havenotaccepted)
+			{
+				$vsafr_redtothread = $vbulletin->input->clean_gpc('r', 't', TYPE_UINT);
+				vbsetcookie('vsafr_redtopage', 'showthread.php?t='.$vsafr_redtothread);
+				$vbulletin->url = 'misc.php?do=vsarules&amp;doredir=1&amp;cfrset='.$foruminfo['vsa_frules'];
+				eval(print_standard_redirect('redirect_vsafrules_accept_viewthread',1,1));
+			}
+		}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title><![CDATA[Valter's Hacks Template Group]]></title>
+			<hookname>template_groups</hookname>
+			<phpcode><![CDATA[$only['vsa_'] = 'Valter';
+		]]></phpcode>
+		</plugin>
+	</plugins>
+	<phrases>
+		<phrasetype name="Front-End Redirect Messages" fieldname="frontredirect">
+			<phrase name="vsafrules_accept_forum" date="0" username="Valter" version=""><![CDATA[You must first accept the Rules to be able to view this forum!]]></phrase>
+			<phrase name="vsafrules_accept_mails" date="0" username="Valter" version=""><![CDATA[You must first accept the Forum Rules to be able to send e-mails!]]></phrase>
+			<phrase name="vsafrules_accept_pms" date="0" username="Valter" version=""><![CDATA[You must first accept the Forum Rules to be able to send PMs!]]></phrase>
+			<phrase name="vsafrules_accept_post" date="0" username="Valter" version=""><![CDATA[You must first accept the Rules to be able to reply to threads in this forum!]]></phrase>
+			<phrase name="vsafrules_accept_postthread" date="0" username="Valter" version=""><![CDATA[You must first accept the Rules to be able to create new threads in this forum!]]></phrase>
+			<phrase name="vsafrules_accept_viewthread" date="0" username="Valter" version=""><![CDATA[You must first accept the Rules to be able to view threads in this forum!]]></phrase>
+			<phrase name="vsafrules_resetdone_all" date="0" username="Valter" version=""><![CDATA[Done! All registered users will need to accept Forum Rules again.]]></phrase>
+			<phrase name="vsafrules_resetdone_user" date="0" username="Valter" version=""><![CDATA[Done! User will need to accept the Rules again.]]></phrase>
+		</phrasetype>
+		<phrasetype name="GLOBAL" fieldname="global">
+			<phrase name="vsafrules_add" date="0" username="Valter" version=""><![CDATA[Add Rule Set]]></phrase>
+			<phrase name="vsafrules_agree_note" date="0" username="Valter" version=""><![CDATA[{1}, You must accept the Forum Rules below to be able to use some forum functions.]]></phrase>
+			<phrase name="vsafrules_all" date="0" username="Valter" version=""><![CDATA[All]]></phrase>
+			<phrase name="vsafrules_collapsed" date="0" username="Valter" version=""><![CDATA[Collapsed]]></phrase>
+			<phrase name="vsafrules_delete" date="0" username="Valter" version=""><![CDATA[Delete This Rule Set]]></phrase>
+			<phrase name="vsafrules_edit" date="0" username="Valter" version=""><![CDATA[Edit Forum Rules]]></phrase>
+			<phrase name="vsafrules_force_set" date="0" username="Valter" version=""><![CDATA[Force user to accept Rules again]]></phrase>
+			<phrase name="vsafrules_gen_always" date="0" username="Valter" version=""><![CDATA[Show Always]]></phrase>
+			<phrase name="vsafrules_gen_collapsed" date="0" username="Valter" version=""><![CDATA[Collapse when another Rule set is requested]]></phrase>
+			<phrase name="vsafrules_gen_disabled" date="0" username="Valter" version=""><![CDATA[Disable when another Rule set is requested]]></phrase>
+			<phrase name="vsafrules_iagree_note" date="0" username="Valter" version=""><![CDATA[I have read, and agree to abide by the {1} rules.]]></phrase>
+			<phrase name="vsafrules_manage" date="0" username="Valter" version=""><![CDATA[Manage Rules]]></phrase>
+			<phrase name="vsafrules_manage_forums" date="0" username="Valter" version=""><![CDATA[Apply to Forums]]></phrase>
+			<phrase name="vsafrules_morerules" date="0" username="Valter" version=""><![CDATA[More Rules]]></phrase>
+			<phrase name="vsafrules_not_agreed" date="0" username="Valter" version=""><![CDATA[You have chosen not to accept the Forum Rules. Select the checkbox and then Submit the form. Until you accept the Forum Rules you will not be able to use some forum functions.]]></phrase>
+			<phrase name="vsafrules_notaccepted" date="0" username="Valter" version=""><![CDATA[Forum Rules NOT accepted]]></phrase>
+			<phrase name="vsafrules_note" date="1282660246" username="Vitaly" version=""><![CDATA[For breaking above rules you may be warned/banned appropriately!]]></phrase>
+			<phrase name="vsafrules_postreplies" date="0" username="Valter" version=""><![CDATA[Post Replies]]></phrase>
+			<phrase name="vsafrules_postthreads" date="0" username="Valter" version=""><![CDATA[Post Threads]]></phrase>
+			<phrase name="vsafrules_reg_myrules" date="0" username="Valter" version=""><![CDATA[Replace With General Forum Rules]]></phrase>
+			<phrase name="vsafrules_reg_origrules" date="0" username="Valter" version=""><![CDATA[Leave As It Is]]></phrase>
+			<phrase name="vsafrules_reset_all" date="0" username="Valter" version=""><![CDATA[Reset Acceptance Status For All Members]]></phrase>
+			<phrase name="vsafrules_reset_select" date="0" username="Valter" version=""><![CDATA[Please select Rule sets you wish to reset acceptance status for]]></phrase>
+			<phrase name="vsafrules_resetall_confirm" date="0" username="Valter" version=""><![CDATA[You are about to reset selected Rules acceptance status for all forum members. Are you sure?]]></phrase>
+			<phrase name="vsafrules_resetuser_confirm" date="0" username="Valter" version=""><![CDATA[<strong>Warning!</strong><br /><br />You are about to reset "{3}" acceptance status for <strong><a href="{2}">{1}</a></strong>. Are you sure?]]></phrase>
+			<phrase name="vsafrules_resetuser_confirmall" date="0" username="Valter" version=""><![CDATA[<strong>Warning!</strong><br /><br />You are about to reset all Rules acceptance status for <strong><a href="{2}">{1}</a></strong>. Are you sure?]]></phrase>
+			<phrase name="vsafrules_rules" date="1282660210" username="Vitaly" version=""><![CDATA[Forum Rules]]></phrase>
+			<phrase name="vsafrules_sendmails" date="0" username="Valter" version=""><![CDATA[Send e-mails]]></phrase>
+			<phrase name="vsafrules_sendpms" date="0" username="Valter" version=""><![CDATA[Send PMs]]></phrase>
+			<phrase name="vsafrules_setforum" date="0" username="Valter" version=""><![CDATA[Apply this to selected forums]]></phrase>
+			<phrase name="vsafrules_undeletable" date="0" username="Valter" version=""><![CDATA[Undeletable]]></phrase>
+			<phrase name="vsafrules_userstatus" date="0" username="Valter" version=""><![CDATA[Rules accepted: {1}]]></phrase>
+			<phrase name="vsafrules_viewforums" date="0" username="Valter" version=""><![CDATA[View Forums]]></phrase>
+			<phrase name="vsafrules_viewthreads" date="0" username="Valter" version=""><![CDATA[View Threads]]></phrase>
+		</phrasetype>
+		<phrasetype name="vBulletin Settings" fieldname="vbsettings">
+			<phrase name="setting_vsafrules_bb_desc" date="0" username="Valter" version=""><![CDATA[Enable BB codes in Rules (HTML used if disabled)]]></phrase>
+			<phrase name="setting_vsafrules_enable_global_desc" date="0" username="Valter" version=""><![CDATA[Enable Hack?]]></phrase>
+			<phrase name="setting_vsafrules_enable_global_title" date="0" username="Valter" version=""><![CDATA[Main Options]]></phrase>
+			<phrase name="setting_vsafrules_enable_infraction_desc" date="0" username="Valter" version=""><![CDATA[Reset acceptance status when user received infraction]]></phrase>
+			<phrase name="setting_vsafrules_enable_items_desc" date="0" username="Valter" version=""><![CDATA[Before Accepting Rules User Can Not]]></phrase>
+			<phrase name="setting_vsafrules_enable_items_title" date="0" username="Valter" version=""><![CDATA[Permission Settings]]></phrase>
+			<phrase name="setting_vsafrules_excluded_groups_desc" date="0" username="Valter" version=""><![CDATA[Usergroups excluded from restrictions (comma separated ID list)]]></phrase>
+			<phrase name="setting_vsafrules_fsetselector_desc" date="0" username="Valter" version=""><![CDATA[Show 'More Rules' drop-down menu on Rules page]]></phrase>
+			<phrase name="setting_vsafrules_gen_rules_desc" date="0" username="Valter" version=""><![CDATA[General Rules Options]]></phrase>
+			<phrase name="setting_vsafrules_link_color_desc" date="0" username="Valter" version=""><![CDATA["Forum Rules" text color (blank to use style's default)]]></phrase>
+			<phrase name="setting_vsafrules_reg_rules_desc" date="0" username="Valter" version=""><![CDATA[Registration Rules Options]]></phrase>
+			<phrase name="setting_vsafrules_reset_desc" date="0" username="Valter" version=""><![CDATA[<br />Some useful links to product stuff]]></phrase>
+			<phrase name="setting_vsafrules_show_link_desc" date="0" username="Valter" version=""><![CDATA[Automatically add "Forum Rules" to Navbar]]></phrase>
+			<phrase name="setting_vsafrules_show_resetmi_desc" date="0" username="Valter" version=""><![CDATA[Automatically add "Force User To Accept Forum Rules" to member profiles]]></phrase>
+			<phrase name="setting_vsafrules_time_desc" date="0" username="Valter" version=""><![CDATA[Seconds to wait before "Accept" button is clickable ('0' to disable counter)]]></phrase>
+			<phrase name="setting_vsafrules_time_title" date="0" username="Valter" version=""><![CDATA[Other Options]]></phrase>
+			<phrase name="settinggroup_vsafrules" date="0" username="Valter" version=""><![CDATA[VSa - Advanced Forum Rules]]></phrase>
+		</phrasetype>
+	</phrases>
+	<options>
+		<settinggroup name="vsafrules" displayorder="65535">
+			<setting varname="vsafrules_enable_global" displayorder="5">
+				<datatype>number</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsafrules_enable_items" displayorder="10">
+				<datatype>free</datatype>
+				<optioncode><![CDATA[
+<table width=\"100%\" align=\"center\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">
+<tr>
+<td class=\"smallfont\" width=\"50%\">
+<input type=\"checkbox\" name=\"setting[$setting[varname]][]\" value=\"viewforums\" id=\"cb_viewforums\" " . iif(strpos($setting[value], 'viewforums') !== false, ' checked="checked"') . iif($vbulletin->debug, " title=\"name=&quot;setting[$setting[varname]]&quot;\"") . " />$vbphrase[vsafrules_viewforums]
+</td>
+<td class=\"smallfont\" width=\"50%\">
+<input type=\"checkbox\" name=\"setting[$setting[varname]][]\" value=\"viewthreads\" id=\"cb_viewthreads\" " . iif(strpos($setting[value], 'viewthreads') !== false, ' checked="checked"') . iif($vbulletin->debug, " title=\"name=&quot;setting[$setting[varname]]&quot;\"") . " />$vbphrase[vsafrules_viewthreads]
+</td>
+</tr>
+<tr>
+<td class=\"smallfont\" width=\"50%\">
+<input type=\"checkbox\" name=\"setting[$setting[varname]][]\" value=\"postthreads\" id=\"cb_postthreads\" " . iif(strpos($setting[value], 'postthreads') !== false, ' checked="checked"') . iif($vbulletin->debug, " title=\"name=&quot;setting[$setting[varname]]&quot;\"") . " />$vbphrase[vsafrules_postthreads]
+</td>
+<td class=\"smallfont\">
+<input type=\"checkbox\" name=\"setting[$setting[varname]][]\" value=\"postreplies\" id=\"cb_postreplies\" " . iif(strpos($setting[value], 'postreplies') !== false, ' checked="checked"') . iif($vbulletin->debug, " title=\"name=&quot;setting[$setting[varname]]&quot;\"") . " />$vbphrase[vsafrules_postreplies]
+</td>
+</tr>
+<td class=\"smallfont\">
+<input type=\"checkbox\" name=\"setting[$setting[varname]][]\" value=\"sendpms\" id=\"cb_sendpms\" " . iif(strpos($setting[value], 'sendpms') !== false, ' checked="checked"') . iif($vbulletin->debug, " title=\"name=&quot;setting[$setting[varname]]&quot;\"") . " />$vbphrase[vsafrules_sendpms]
+</td>
+<td class=\"smallfont\">
+<input type=\"checkbox\" name=\"setting[$setting[varname]][]\" value=\"sendmails\" id=\"cb_sendmails\" " . iif(strpos($setting[value], 'sendmails') !== false, ' checked="checked"') . iif($vbulletin->debug, " title=\"name=&quot;setting[$setting[varname]]&quot;\"") . " />$vbphrase[vsafrules_sendmails]
+</td>
+</table><input type=\"hidden\" name=\"setting[$setting[varname]][]\" value=\"-1\" />]]></optioncode>
+				<defaultvalue>postthreads,postreplies,sendmails,-1</defaultvalue>
+			</setting>
+			<setting varname="vsafrules_excluded_groups" displayorder="15">
+				<datatype>free</datatype>
+				<defaultvalue>5,6,7</defaultvalue>
+			</setting>
+			<setting varname="vsafrules_time" displayorder="20">
+				<datatype>number</datatype>
+				<defaultvalue>20</defaultvalue>
+			</setting>
+			<setting varname="vsafrules_bb" displayorder="25">
+				<datatype>number</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsafrules_fsetselector" displayorder="30">
+				<datatype>number</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsafrules_enable_infraction" displayorder="35">
+				<datatype>number</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsafrules_gen_rules" displayorder="40">
+				<datatype>free</datatype>
+				<optioncode>select:piped
+1|vsafrules_gen_always
+2|vsafrules_gen_collapsed
+3|vsafrules_gen_disabled</optioncode>
+				<defaultvalue>2</defaultvalue>
+			</setting>
+			<setting varname="vsafrules_reg_rules" displayorder="45">
+				<datatype>free</datatype>
+				<optioncode>select:piped
+1|vsafrules_reg_myrules
+2|vsafrules_reg_origrules</optioncode>
+				<defaultvalue>2</defaultvalue>
+			</setting>
+			<setting varname="vsafrules_show_link" displayorder="50">
+				<datatype>number</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsafrules_link_color" displayorder="55">
+				<datatype>free</datatype>
+				<defaultvalue>#66ff00</defaultvalue>
+			</setting>
+			<setting varname="vsafrules_show_resetmi" displayorder="60">
+				<datatype>number</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="vsafrules_reset" displayorder="65">
+				<datatype>free</datatype>
+				<optioncode><![CDATA[<span class=\"smallfont\">
+		<a target=\"_blank\" href=\"../misc.php?do=vsaafr_mng\">$vbphrase[vsafrules_manage]</a> | <a target=\"_blank\" href=\"../misc.php?do=vsaafr_mng&at=fs\">$vbphrase[vsafrules_manage_forums]</a><br />
+		<a href=\"../misc.php?do=cfrresetall\">$vbphrase[vsafrules_reset_all]</a><br />
+		<a target=\"_blank\" href=\"phrase.php?do=edit&e[global][vsafrules_note]\">Edit note shown below Rules</a></span>]]></optioncode>
+			</setting>
+		</settinggroup>
+	</options>
+	<helptopics>
+	</helptopics>
+	<cronentries>
+	</cronentries>
+	<faqentries>
+	</faqentries>
+	<templateedits>
+	</templateedits>
+</product>
