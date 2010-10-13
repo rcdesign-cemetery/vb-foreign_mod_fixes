@@ -554,12 +554,10 @@ class AME_message_prep extends AME_prep_base
 				
 				if (sizeof($info))
 				{
-					
 					$text = preg_replace('%(\[(quote|php|html|code|nomedia)([^\]]*)\](.*?)\[/(\2)\])%sime', '$this->substitute(\'\1\', $this->_subbed)', $text);
-//					$text = preg_replace($info['find'], $info['replace'], $text);
 
-                    $text = preg_replace($info['find_opt'], $info['replace'], $text);
                     $text = preg_replace($info['find_simple'], $info['replace'], $text);
+                    $text = preg_replace($info['find_opt'], $info['replace'], $text);
 
 				}
 		
@@ -602,7 +600,7 @@ class AME_message_prep extends AME_prep_base
 				
 			}
 			
-			$url_tail = '[\w:\/?\[\]@!$&\'()*+.,;="%\-]*';
+			$url_tail = '[\w:\/?\[\]@!$&\'()*+.,;=%\-]*';
 
 			if (!is_array($info)) 
 			{
@@ -619,7 +617,7 @@ class AME_message_prep extends AME_prep_base
 //					$info['find'][] 							= "#\[url(?:\]|=\"?)($result[regex_url][&\w;=\+_\-\%\.\,\#]*)(?:\"?\](?:.*?))?\[/url\]#im";
 					$info['replace'][] 							= "[video]\\1[/video]";
 
-                    $info['find_opt'][] 						= '#\[url=\"?(' . $result['regex_url'] . $url_tail . ')(?:\"?\])+(?:.*?)\[\/url\]#im';
+                    $info['find_opt'][] 						= '#\[url=\"?(' . $result['regex_url'] . $url_tail . ')(?:\"?\])\g{1}\[\/url\]#im';
                     $info['find_simple'][] 						= '#\[url\](' . $result['regex_url'] . $url_tail . ')\[\/url\]#im';
 				}
 				
