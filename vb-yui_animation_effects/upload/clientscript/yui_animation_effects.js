@@ -10,11 +10,7 @@ vBCollapse.prototype.init = function (a, b) {
     this.target = YAHOO.util.Dom.get(this.targetid);
     this.target.vBCollapseInstance = this;
     if (!this.iscat) {
-        if (YAHOO.env.ua.ie) {
-            this.blockheight = parseInt(YAHOO.util.Dom.get(this.targetid).offsetHeight)
-        } else {
-            this.blockheight = parseInt(YAHOO.util.Dom.getStyle(this.targetid, 'height'))
-        }
+        this.blockheight = parseInt(YAHOO.util.Dom.get(this.targetid).offsetHeight);
         YAHOO.util.Dom.setStyle(this.targetid, "overflow", "hidden")
     }
     var d = this.link.getElementsByTagName("img");
@@ -72,11 +68,7 @@ vBCollapse.prototype.toggle_collapse = function (e) {
             this.collapse()
         }
     } else {
-        if (YAHOO.env.ua.ie) {
-            var a = parseInt(YAHOO.util.Dom.get(this.targetid).offsetHeight)
-        } else {
-            var a = parseInt(YAHOO.util.Dom.getStyle(this.targetid, 'height'))
-        }
+        var a = parseInt(YAHOO.util.Dom.get(this.targetid).offsetHeight)
         if (a < 5 || a == 0) {
             this.expand()
         } else {
