@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<product productid="yui_animation_effects" active="1">
+	<title>YUI Animation Effect</title>
+	<description>Adds fade effect to popupmenus and scroll effect to collapsible blocks</description>
+	<version>1.1.1</version>
+	<url>http://www.vbulletin.org/forum/showthread.php?t=233425</url>
+	<versioncheckurl><![CDATA[http://www.vbulletin.org/forum/misc.php?do=productcheck&pid=yui_animation_effects]]></versioncheckurl>
+	<dependencies>
+	</dependencies>
+	<codes>
+	</codes>
+	<templates>
+	</templates>
+	<stylevardfns>
+	</stylevardfns>
+	<stylevars>
+	</stylevars>
+	<plugins>
+		<plugin active="1" executionorder="2">
+			<title>YUIAE - Include JS files</title>
+			<hookname>global_state_check</hookname>
+			<phpcode><![CDATA[global $template_hook; 
+$template_hook['headinclude_javascript'] .= '<script type="text/javascript" src="clientscript/yui/animation/animation-min.js"></script>
+<script type="text/javascript" src="clientscript/yui_animation_effects.js"></script>';]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="1">
+			<title>YUIAE - Avoid duplicate YUI Animation calls</title>
+			<hookname>process_templates_complete</hookname>
+			<phpcode><![CDATA[if (THIS_SCRIPT == 'index')
+{
+	$vbulletin->templatecache['FORUMHOME'] = str_replace('<script type="text/javascript" src="\' . vB_Template_Runtime::fetchStylevar("yuipath") . \'/animation/animation-min.js?v=\' . $vboptions[\'simpleversion\'] . \'"></script>', '', $vbulletin->templatecache['FORUMHOME']);
+}]]></phpcode>
+		</plugin>
+	</plugins>
+	<phrases>
+	</phrases>
+	<options>
+	</options>
+	<helptopics>
+	</helptopics>
+	<cronentries>
+	</cronentries>
+	<faqentries>
+	</faqentries>
+</product>
