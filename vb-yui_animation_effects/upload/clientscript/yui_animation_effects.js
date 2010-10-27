@@ -1,3 +1,4 @@
+/*
 vBCollapse.prototype.init = function (a, b) {
     this.link = a;
     this.factory = b;
@@ -77,6 +78,7 @@ vBCollapse.prototype.toggle_collapse = function (e) {
     }
     return false
 };
+*/
 PopupMenu.prototype.set_display = function (a, b) {
     if (YAHOO.lang.isNull(this.menu)) {
         return
