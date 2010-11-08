@@ -112,7 +112,6 @@ PopupMenu.prototype.set_display = function (a, b) {
         if (this.check_menu(this.menu)) {
             YAHOO.util.Dom.setStyle(this.menu, "opacity", 0);
             YAHOO.util.Dom.setStyle(this.menu, "display", "block");
-            YAHOO.util.Dom.setXY(this.menu, this.get_menu_position(b));
             var d = new YAHOO.util.Anim(this.menu, {
                 opacity: {
                     from: 0,
@@ -120,6 +119,7 @@ PopupMenu.prototype.set_display = function (a, b) {
                 }
             }, 0.3, YAHOO.util.Easing.easeOut);
             d.animate();
+            this.set_offset(this.menu, b);
             this.set_control_style()
         }
     } else if (a) {
