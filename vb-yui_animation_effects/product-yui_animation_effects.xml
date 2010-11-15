@@ -6,6 +6,11 @@
 	<version>1.1.1</version>
 	<url>http://www.vbulletin.org/forum/showthread.php?t=233425</url>
 	<versioncheckurl><![CDATA[http://www.vbulletin.org/forum/misc.php?do=productcheck&pid=yui_animation_effects]]></versioncheckurl>
+	<apm_releasedate>0</apm_releasedate>
+	<apm_author />
+	<apm_relatedurl />
+	<apm_extrainfo />
+	<apm_extraedit />
 	<dependencies>
 	</dependencies>
 	<codes>
@@ -20,9 +25,15 @@
 		<plugin active="1" executionorder="2">
 			<title>YUIAE - Include JS files</title>
 			<hookname>global_state_check</hookname>
-			<phpcode><![CDATA[global $template_hook; 
-$template_hook['headinclude_javascript'] .= '<script type="text/javascript" src="clientscript/yui/animation/animation-min.js"></script>
-<script type="text/javascript" src="clientscript/yui_animation_effects.js"></script>';]]></phpcode>
+			<phpcode><![CDATA[global $template_hook;
+
+if (!isset($show['yui_animation_exists']))
+{
+    $show['yui_animation_exists'] = true;
+    $template_hook['headinclude_javascript'] .= '<script type="text/javascript" src="clientscript/yui/animation/animation-min.js"></script>';
+}
+
+$template_hook['headinclude_javascript'] .= '<script type="text/javascript" src="clientscript/yui_animation_effects.js"></script>';]]></phpcode>
 		</plugin>
 		<plugin active="1" executionorder="1">
 			<title>YUIAE - Avoid duplicate YUI Animation calls</title>
@@ -43,4 +54,6 @@ $template_hook['headinclude_javascript'] .= '<script type="text/javascript" src=
 	</cronentries>
 	<faqentries>
 	</faqentries>
+	<templateedits>
+	</templateedits>
 </product>
