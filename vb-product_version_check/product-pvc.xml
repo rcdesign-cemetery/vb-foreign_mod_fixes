@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<product productid="pvc" active="1">
+	<title><![CDATA['Version check' for all hacks]]></title>
+	<description>With this hack you can check all installed products for updates.</description>
+	<version>1.6.4</version>
+	<url>http://www.vbulletin.org/forum/showthread.php?t=133366</url>
+	<versioncheckurl><![CDATA[http://www.vbulletin.org/forum/misc.php?do=productcheck&pid=pvc]]></versioncheckurl>
+	<apm_releasedate>0</apm_releasedate>
+	<apm_author />
+	<apm_relatedurl />
+	<apm_extrainfo />
+	<apm_extraedit />
+	<dependencies>
+	</dependencies>
+	<codes>
+		<code version="1.5.0">
+			<installcode><![CDATA[echo('<ul>');
+require_once(DIR . '/includes/class_dbalter.php');
+$dbalter = new vB_Database_Alter_MySQL($db);
+
+echo('<li>Altering Table <strong>product</strong> ...');
+vbflush();
+$dbalter->fetch_table_info('product');
+$dbalter->add_field(array (
+  'name' => 'latest_version',
+  'type' => 'VARCHAR',
+  'length' => '25',
+  'null' => false,
+  'default' => '',
+));
+echo('Done!</li>');
+vbflush();
+
+echo('</ul>');
+vbflush();]]></installcode>
+			<uninstallcode><![CDATA[echo('<ul>');
+require_once(DIR . '/includes/class_dbalter.php');
+$dbalter = new vB_Database_Alter_MySQL($db);
+
+echo('<li>Altering Table <strong>product</strong> ...');
+vbflush();
+$dbalter->fetch_table_info('product');
+$dbalter->drop_field('latest_version');
+echo('Done!</li>');
+vbflush();
+
+echo('</ul>');
+vbflush();]]></uninstallcode>
+		</code>
+		<code version="1.6.0">
+			<installcode><![CDATA[$db->hide_errors();
+$db->query_write("ALTER TABLE " . TABLE_PREFIX . "product CHANGE latest_version latestversion VARCHAR(25) NOT NULL DEFAULT ''");
+$db->show_errors();]]></installcode>
+			<uninstallcode><![CDATA[$db->hide_errors();
+$db->query_write("ALTER TABLE " . TABLE_PREFIX . "product CHANGE latestversion latest_version VARCHAR(25) NOT NULL DEFAULT ''");
+$db->show_errors();]]></uninstallcode>
+		</code>
+	</codes>
+	<templates>
+	</templates>
+	<stylevardfns>
+	</stylevardfns>
+	<stylevars>
+	</stylevars>
+	<plugins>
+		<plugin active="1" executionorder="5">
+			<title>Aktuellste Versionen anzeigen</title>
+			<hookname>admin_complete</hookname>
+			<phpcode><![CDATA[if ($_REQUEST['do'] == 'product')
+{
+    $html = @ob_get_contents();
+    while (@ob_end_clean());
+    if (!empty($html))
+    {
+        global $products, $bgcounter, $stylevar;
+
+        @ob_start();
+
+        $search = array(
+            "<form action=\"plugin.php?do=productexport\" method=\"post\" target=\"download\" name=\"cpform\" id=\"cpform\">",
+            "<td class=\"tcat\" align=\"center\" colspan=\"4\"><b>$vbphrase[installed_products]</b></td>",
+            "<td class=\"thead\">$vbphrase[version]</td>",
+            "<strong>vBulletin</strong></td>\n\t<td class=\"alt1\" align=\"".vB_Template_Runtime::fetchStyleVar('left') ."\">" . $vbulletin->options['templateversion']
+        );
+
+        $replace = array(
+            "<p align=\"center\"><a href=\"plugin.php?do=productadd\">[$vbphrase[add_import_product]]</a> - <a href=\"misc.php?do=updateversions\">[$vbphrase[check_all_products]]</a></p>\n<form action=\"plugin.php?do=productexport\" method=\"post\" target=\"download\" name=\"cpform\" id=\"cpform\">",
+            "<td class=\"tcat\" align=\"center\" colspan=\"5\"><b>$vbphrase[installed_products]</b></td>",
+            "<td class=\"thead\">$vbphrase[version]</td>\n\t<td class=\"thead\">$vbphrase[latest_version]</td>",
+            "<strong>vBulletin</strong></td>\n\t<td class=\"alt1\" align=\"".vB_Template_Runtime::fetchStyleVar('left') ."\">" . $vbulletin->options['templateversion'] . "</td>\n\t<td class=\"alt1\" align=\"".vB_Template_Runtime::fetchStyleVar('left') ."\">$vbphrase[latest_version_available_x]</td>"
+        );
+    
+        $vbulletin->db->data_seek($products, 0);
+        $bgcounter = 1;
+        while ($product = $vbulletin->db->fetch_array($products))
+        {
+            $bgclass= fetch_row_bgclass();
+            $title = htmlspecialchars_uni($product['title']);
+            if (!$product['active'])
+            {
+                $title = "<strike>$title</strike>";
+            }
+            if ($product['url'])
+            {
+                $title = '<a href="' . htmlspecialchars_uni($product['url']) . "\" target=\"_blank\">$title</a>";
+            }
+            $product['version'] = htmlspecialchars_uni($product['version']);
+            if (is_newer_version($product['latestversion'], $product['version']))
+            {
+                $search[] = "$title</td>\n\t<td class=\"$bgclass\" align=\"".vB_Template_Runtime::fetchStyleVar('left') ."\">$product[version]";
+                $replace[] = "<strong>$title</title></td>\n\t<td class=\"$bgclass\" align=\"".vB_Template_Runtime::fetchStyleVar('left') ."\"><span style=\"color: #AA0000\"><strong>$product[version]</strong></span></td>\n\t<td class=\"$bgclass\" align=\"".vB_Template_Runtime::fetchStyleVar('left') ."\"><span style=\"color: #AA0000\"><strong>$product[latestversion]</strong></span></td>";
+            }
+            else
+            {
+                $search[] = "$title</td>\n\t<td class=\"$bgclass\" align=\"".vB_Template_Runtime::fetchStyleVar('left') ."\">$product[version]";
+                $replace[] = "$title</td>\n\t<td class=\"$bgclass\" align=\"".vB_Template_Runtime::fetchStyleVar('left') ."\">$product[version]</td>\n\t<td class=\"$bgclass\" align=\"".vB_Template_Runtime::fetchStyleVar('left') ."\">$product[latestversion]</td>";
+            }
+        }
+        echo(str_replace($search, $replace, $html));
+    }
+}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>Output-Buffer aktivieren falls n</title>
+			<hookname>admin_global</hookname>
+			<phpcode><![CDATA[if ($_REQUEST['do'] == 'product' AND !$vbulletin->options['gzipoutput'])
+{
+	@ob_start();
+}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>Versionen aktualisieren</title>
+			<hookname>admin_maintenance</hookname>
+			<phpcode><![CDATA[if ($_REQUEST['do'] == 'updateversions')
+{
+	print_dots_start('<b>' . $vbphrase['updating_versions'] . "</b>, $vbphrase[please_wait]", ':', 'dspan');
+
+	$i = 0;
+
+	$products = $db->query_read("
+			SELECT *
+			FROM " . TABLE_PREFIX . "product
+			ORDER BY title
+	");
+
+	while ($product = $db->fetch_array($products))
+	{
+		$latest_version = $vbphrase['n_a'];
+
+		if ($product['versioncheckurl'])
+		{
+			$version_url = @parse_url($product['versioncheckurl']);
+
+			if (!$version_url)
+			{
+				$latest_version = $vbphrase['pvc_error'];
+			}
+			else
+			{
+				if (!$version_url['port'])
+				{
+					$version_url['port'] = 80;
+				}
+				if (!$version_url['path'])
+				{
+					$version_url['path'] = '/';
+				}
+	
+				$fp = @fsockopen($version_url['host'], ($version_url['port'] ? $version_url['port'] : 80), $errno, $errstr, 10);
+				if (!$fp)
+				{
+					$latest_version = $vbphrase['pvc_error'];
+				}
+				else
+				{
+					$send_headers = "POST $version_url[path] HTTP/1.0\r\n";
+					$send_headers .= "Host: $version_url[host]\r\n";
+					$send_headers .= "User-Agent: vBulletin Product Version Check\r\n";
+					if ($version_url['query'])
+					{
+						$send_headers .= "Content-Type: application/x-www-form-urlencoded\r\n";
+						$send_headers .= "Content-Length: " . strlen($version_url['query']) . "\r\n";
+					}
+					$send_headers .= "\r\n";
+	
+					fwrite($fp, $send_headers . $version_url['query']);
+	
+					$full_result = '';
+					while (!feof($fp))
+					{
+						$result = fgets($fp, 1024);
+						$full_result .= $result;
+					}
+	
+					fclose($fp);
+	
+					preg_match('#^(.*)\r\n\r\n(.*)$#sU', $full_result, $matches);
+					$headers = trim($matches[1]);
+					$body = trim($matches[2]);
+	
+					if (preg_match('#<version productid="' . preg_quote($product['productid'], '#') . '">(.+)</version>#iU', $body, $matches))
+					{
+						$latest_version = $matches[1];
+					}
+					else if (preg_match('#<version>(.+)</version>#iU', $body, $matches))
+					{
+						$latest_version = $matches[1];
+					}
+					else
+					{
+						$latest_version = $vbphrase['pvc_error'];
+					}
+				}
+			}
+		}
+
+		$i++;
+
+		$db->query_write("UPDATE " . TABLE_PREFIX . "product
+			SET latestversion = '$latest_version'
+			WHERE productid = '" . $product['productid'] . "'
+		");
+	}
+
+	print_dots_stop();
+
+	print_cp_redirect('plugin.php?do=product');
+}]]></phpcode>
+		</plugin>
+	</plugins>
+	<phrases>
+		<phrasetype name="Scheduled Tasks" fieldname="cron">
+			<phrase name="task_pvcron_desc" date="1171199797" username="hurik" version="1.6.3" />
+			<phrase name="task_pvcron_log" date="1171199797" username="hurik" version="1.6.3" />
+			<phrase name="task_pvcron_title" date="1171199797" username="hurik" version="1.6.3"><![CDATA['Version check' for all hacks - Cron]]></phrase>
+		</phrasetype>
+		<phrasetype name="Error Messages" fieldname="error">
+			<phrase name="pvc_update" date="1289869205" username="hurik" version="1.1.1"><![CDATA[<strong>For these pruduct there a new updates:</strong><br \><strong><a href="http://www.vbulletin.org/forum/misc.php?do=producthelp&amp;pid=paulm_mis_40" target="_blank">Miserable Users</a></strong> - Installed version: <strong>4.0.7</strong> - Newest version: <strong>4.0.8</strong>]]></phrase>
+		</phrasetype>
+		<phrasetype name="Maintenance Tools" fieldname="maintenance">
+			<phrase name="pvc_error" date="1170939851" username="hurik" version="1.6.2"><![CDATA[error]]></phrase>
+			<phrase name="pvc_na" date="1170939908" username="hurik" version="1.6.2"><![CDATA[-]]></phrase>
+			<phrase name="updating_versions" date="1170873890" username="Kirby" version="1.6.0"><![CDATA[Checking for the new versions]]></phrase>
+		</phrasetype>
+		<phrasetype name="Plugin System" fieldname="plugins">
+			<phrase name="check_all_products" date="1170687432" username="hurik" version="1.5.0"><![CDATA[Check all products for new version]]></phrase>
+		</phrasetype>
+		<phrasetype name="vBulletin Settings" fieldname="vbsettings">
+			<phrase name="setting_pvc_am_desc" date="1170853218" username="hurik" version="1.5.0"><![CDATA[Do you want a message on the control panel home if there is a pruduct update?]]></phrase>
+			<phrase name="setting_pvc_am_title" date="1170853218" username="hurik" version="1.5.0"><![CDATA['Version check' for all hacks - Adminmessage]]></phrase>
+			<phrase name="setting_pvc_ea_address_desc" date="1170684610" username="hurik" version="1.5.0"><![CDATA[Please insert your e-mail adress which schould get the mail.]]></phrase>
+			<phrase name="setting_pvc_ea_address_title" date="1170684610" username="hurik" version="1.5.0"><![CDATA['Version check' for all hacks - E-Mail function]]></phrase>
+			<phrase name="setting_pvc_ea_desc" date="1170853210" username="hurik" version="1.5.0"><![CDATA[Activate the e-mail function?]]></phrase>
+			<phrase name="setting_pvc_ea_title" date="1170853210" username="hurik" version="1.5.0"><![CDATA["Version ]]></phrase>
+		</phrasetype>
+	</phrases>
+	<options>
+		<settinggroup name="plugin" displayorder="560">
+			<setting varname="pvc_am" displayorder="20">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>0</defaultvalue>
+			</setting>
+			<setting varname="pvc_ea" displayorder="21">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>0</defaultvalue>
+			</setting>
+			<setting varname="pvc_ea_address" displayorder="22">
+				<datatype>free</datatype>
+				<defaultvalue>webmaster@your-domain.com</defaultvalue>
+			</setting>
+		</settinggroup>
+	</options>
+	<helptopics>
+	</helptopics>
+	<cronentries>
+		<cron varname="pvcron" active="1" loglevel="1">
+			<filename>./includes/cron/pvcron.php</filename>
+			<scheduling weekday="2" day="-1" hour="4" minute="0" />
+		</cron>
+	</cronentries>
+	<faqentries>
+	</faqentries>
+	<templateedits>
+	</templateedits>
+</product>
