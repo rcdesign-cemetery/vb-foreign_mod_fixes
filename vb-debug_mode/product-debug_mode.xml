@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<product productid="debug_mode" active="1">
+	<title>Debug Mode</title>
+	<description>Enable/Disable debug mode at the click of a button!</description>
+	<version>1.0.0</version>
+	<url>http://www.vbulletin.org/forum/showthread.php?t=176700</url>
+	<versioncheckurl />
+	<apm_releasedate>0</apm_releasedate>
+	<apm_author />
+	<apm_relatedurl />
+	<apm_extrainfo />
+	<apm_extraedit />
+	<dependencies>
+	</dependencies>
+	<codes>
+	</codes>
+	<templates>
+	</templates>
+	<stylevardfns>
+	</stylevardfns>
+	<stylevars>
+	</stylevars>
+	<plugins>
+		<plugin active="1" executionorder="5">
+			<title>Debug Mode in ACP</title>
+			<hookname>admin_global</hookname>
+			<phpcode><![CDATA[if($vbulletin->options['debugm_acp']) 
+{ 
+	$vbulletin->debug = true; 
+}
+
+if($vbulletin->options['debugm_acp_ip'] != '') 
+{ 
+    if($_SERVER["REMOTE_ADDR"] == $vbulletin->options['debugm_acp_ip']) 
+    { 
+        $vbulletin->debug = true; 
+    } 
+}
+
+if($vbulletin->options['debugm_acp_user_y']) 
+{ 
+$uids = explode(',', $vbulletin->options['debugm_acp_uids']); 
+if(in_array($vbulletin->userinfo['userid'], $uids)) 
+{ 
+$vbulletin->debug = true; 
+} 
+}
+
+if($vbulletin->options['debugm_acp_primary_ug_required'])
+{
+if($vbulletin->options['debugm_acp_ugs_y']) 
+{ 
+$ugids = explode(',', $vbulletin->options['debugm_acp_ugs']); 
+if(in_array($vbulletin->userinfo['usergroupid'], $ugids)) 
+{ 
+$vbulletin->debug = true; 
+} 
+}
+}
+else
+{
+if( $vbulletin->options['debugm_acp_ugs_y'])
+{
+    $ugids = explode(',', $vbulletin->options['debugm_acp_ugs']);
+    if (is_member_of($vbulletin->userinfo, $ugids))
+    {
+        $vbulletin->debug = true;
+    }
+}  
+
+}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>---</title>
+			<hookname>admin_options_processing</hookname>
+			<phpcode><![CDATA[if (is_array($vbulletin->GPC['setting']['debugm_ugs']))
+{
+    $vbulletin->GPC['setting']['debugm_ugs'] = implode(',', $vbulletin->GPC['setting']['debugm_ugs']);
+}
+
+if (is_array($vbulletin->GPC['setting']['debugm_acp_ugs']))
+{
+    $vbulletin->GPC['setting']['debugm_acp_ugs'] = implode(',', $vbulletin->GPC['setting']['debugm_acp_ugs']);
+}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>Debugmodus im Forum</title>
+			<hookname>global_bootstrap_init_start</hookname>
+			<phpcode><![CDATA[if($vbulletin->options['debugm_f_ip'] != '')
+{
+	if($_SERVER["REMOTE_ADDR"] == $vbulletin->options['debugm_f_ip'])
+	{
+		$vbulletin->debug = true;
+	}
+}
+
+if($vbulletin->options['debugm_f'])
+{
+	$vbulletin->debug = true;
+}
+if($vbulletin->options['debugm_user_y'])
+{
+$uids = explode(',', $vbulletin->options['debugm_userids']);
+if(in_array($vbulletin->userinfo['userid'], $uids))
+{
+$vbulletin->debug = true;
+}
+}
+if($vbulletin->options['debugm_primary_ug_required'])
+{
+if($vbulletin->options['debugm_ug_y'])
+{
+$ugids = explode(',', $vbulletin->options['debugm_ugs']);
+if(in_array($vbulletin->userinfo['usergroupid'], $ugids))
+{
+$vbulletin->debug = true;
+}
+}
+}
+else
+{
+//THY to stoebi !
+if( $vbulletin->options['debugm_ug_y'])
+{
+    $ugids = explode(',', $vbulletin->options['debugm_ugs']);
+    if (is_member_of($vbulletin->userinfo, $ugids))
+    {
+        $vbulletin->debug = true;
+    }
+}  
+
+}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>mod</title>
+			<hookname>mod_global</hookname>
+			<phpcode><![CDATA[if ($vbulletin->options['debugm_mod_onoff'] == '1')
+					{
+               $vbulletin->debug = true;
+			}
+			else
+			{
+			   $vbulletin->debug = false; 
+			}
+			
+			]]></phpcode>
+		</plugin>
+	</plugins>
+	<phrases>
+		<phrasetype name="vBulletin Settings" fieldname="vbsettings">
+			<phrase name="setting_debugm_acp_desc" date="1162062606" username="Jason" version="1.0.0"><![CDATA[Set this setting to 'yes' to have debug information shown to all users with access to your ACP.]]></phrase>
+			<phrase name="setting_debugm_acp_ip_desc" date="1162062606" username="Jason" version="1.0.0"><![CDATA[If you have multiple admins, and you only want to show debug information to yourself when in your ACP, simple enter your IP address here.]]></phrase>
+			<phrase name="setting_debugm_acp_ip_title" date="1162062606" username="Jason" version="1.0.0"><![CDATA[Activate Debug Mode in ACP for a specific IP-address]]></phrase>
+			<phrase name="setting_debugm_acp_title" date="1162062606" username="Jason" version="1.0.0"><![CDATA[Activate Debug Mode in Administrator Control Panel]]></phrase>
+			<phrase name="setting_debugm_acp_uids_desc" date="1162061958" username="Jason" version="1.0.0"><![CDATA[Enter the UserIDs (separated by a comma) for which the ACP should be run in Debug Mode.]]></phrase>
+			<phrase name="setting_debugm_acp_uids_title" date="1162061958" username="Jason" version="1.0.0"><![CDATA[Users with Debug-Mode enabled in ACP]]></phrase>
+			<phrase name="setting_debugm_acp_user_y_desc" date="1162061958" username="Jason" version="1.2.0"><![CDATA[Do yout want Debug Mode to be enabled for specific users in ACP]]></phrase>
+			<phrase name="setting_debugm_acp_user_y_title" date="1162061958" username="Jason" version="1.0.0"><![CDATA[Debug-Mode in ACP for specific users]]></phrase>
+			<phrase name="setting_debugm_f_ip_desc" date="1162061958" username="Jason" version="1.0.0"><![CDATA[Enter your IP address here, so that debug mode will only run for you. You can find your IP address at: www.whatismyip.com]]></phrase>
+			<phrase name="setting_debugm_f_ip_title" date="1162061958" username="Jason" version="1.0.0"><![CDATA[Debug Mode for a specific IP-Address]]></phrase>
+			<phrase name="setting_debugm_mod_onoff_desc" date="1162061958" username="Jason" version="1.0.0"><![CDATA[Select 'yes' to have Debug Mode enabled for ModCP]]></phrase>
+			<phrase name="setting_debugm_mod_onoff_title" date="1162061580" username="Jason" version="1.0.0"><![CDATA[Enable Debug Mode for ModCP]]></phrase>
+			<phrase name="setting_debugm_ug_y_title" date="1162061580" username="Jason" version="1.0.0"><![CDATA[Debug-Mod for specific Usergroups]]></phrase>
+			<phrase name="setting_debugm_user_y_desc" date="1162061580" username="Jason" version="1.0.0"><![CDATA[Set this to 'yes' if you only want to show debug information to specific users. (Note: This is only works with the forums, and not the ACP).]]></phrase>
+			<phrase name="setting_debugm_user_y_title" date="1162061580" username="Jason" version="1.0.0"><![CDATA[Activate debug mode for specific users only]]></phrase>
+			<phrase name="setting_debugm_userids_desc" date="1162061580" username="Jason" version="1.0.0"><![CDATA[Enter the IDs of the users here (seperated by a comma) for which your forums should run in Debug Mode. Only use this option if you have selected 'yes' for the above option.]]></phrase>
+			<phrase name="setting_debugm_userids_title" date="1162061580" username="Jason" version="1.0.0"><![CDATA[User-IDs]]></phrase>
+			<phrase name="settinggroup_debugm" date="1162061580" username="Jason" version="1.0.0"><![CDATA[vBulletin Debug Mode]]></phrase>
+		</phrasetype>
+	</phrases>
+	<options>
+		<settinggroup name="debugm" displayorder="8894">
+			<setting varname="debugm_f_ip" displayorder="20">
+				<datatype>free</datatype>
+			</setting>
+			<setting varname="debugm_acp" displayorder="30">
+				<datatype>free</datatype>
+				<optioncode>yesno</optioncode>
+			</setting>
+			<setting varname="debugm_acp_ip" displayorder="40">
+				<datatype>free</datatype>
+			</setting>
+			<setting varname="debugm_mod_onoff" displayorder="50">
+				<datatype>free</datatype>
+				<optioncode>yesno</optioncode>
+			</setting>
+			<setting varname="debugm_userids" displayorder="60">
+				<datatype>free</datatype>
+			</setting>
+			<setting varname="debugm_user_y" displayorder="60">
+				<datatype>free</datatype>
+				<optioncode>yesno</optioncode>
+			</setting>
+			<setting varname="debugm_acp_user_y" displayorder="90">
+				<datatype>free</datatype>
+				<optioncode>yesno</optioncode>
+			</setting>
+			<setting varname="debugm_acp_uids" displayorder="100">
+				<datatype>free</datatype>
+			</setting>
+		</settinggroup>
+	</options>
+	<helptopics>
+	</helptopics>
+	<cronentries>
+	</cronentries>
+	<faqentries>
+	</faqentries>
+	<templateedits>
+	</templateedits>
+</product>
