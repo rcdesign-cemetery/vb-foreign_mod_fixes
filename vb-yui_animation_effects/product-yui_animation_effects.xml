@@ -16,24 +16,30 @@
 	<codes>
 	</codes>
 	<templates>
+		<template name="yui_anim_js" templatetype="template" date="1291718053" username="admin" version="1.1.1"><![CDATA[<vb:if condition="!isset($show['yui_animation_exists'])">
+<script type="text/javascript" src="{vb:stylevar yuipath}/animation/animation-min.js?v={vb:raw vboptions.simpleversion}"></script>
+</vb:if>
+<script type="text/javascript" src="clientscript/yui_animation_effects.js"></script>]]></template>
 	</templates>
 	<stylevardfns>
 	</stylevardfns>
 	<stylevars>
 	</stylevars>
 	<plugins>
+		<plugin active="1" executionorder="5">
+			<title>Cache templates</title>
+			<hookname>cache_templates</hookname>
+			<phpcode><![CDATA[$cache[] = 'yui_anim_js';]]></phpcode>
+		</plugin>
 		<plugin active="1" executionorder="2">
 			<title>YUIAE - Include JS files</title>
-			<hookname>global_state_check</hookname>
-			<phpcode><![CDATA[global $template_hook;
-
+			<hookname>parse_templates</hookname>
+			<phpcode><![CDATA[$templater = vB_Template::create('yui_anim_js');
+$template_hook['headinclude_javascript'] .= $templater->render();
 if (!isset($show['yui_animation_exists']))
 {
     $show['yui_animation_exists'] = true;
-    $template_hook['headinclude_javascript'] .= '<script type="text/javascript" src="clientscript/yui/animation/animation-min.js"></script>';
-}
-
-$template_hook['headinclude_javascript'] .= '<script type="text/javascript" src="clientscript/yui_animation_effects.js"></script>';]]></phpcode>
+}]]></phpcode>
 		</plugin>
 		<plugin active="1" executionorder="1">
 			<title>YUIAE - Avoid duplicate YUI Animation calls</title>
