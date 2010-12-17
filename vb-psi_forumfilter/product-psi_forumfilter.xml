@@ -226,6 +226,27 @@ foreach ($vbulletin->GPC['excludeforumids'] as $excludeforumid)
 $userdata->usertextfield['excludeforumids'] = implode(',', $excludeforumids);]]></phpcode>
 		</plugin>
 		<plugin active="1" executionorder="5">
+			<title>SFF: Exclude Forums From Search</title>
+			<hookname>search_before_process</hookname>
+			<phpcode><![CDATA[if (in_array($_REQUEST['do'], array('getnew', 'getdaily', 'process', 'intro')))
+{
+    if ($vbulletin->userinfo['userid'] AND !empty($vbulletin->userinfo['excludeforumids']))
+    {
+        $exclude_forum_ids = explode(',', $vbulletin->userinfo['excludeforumids']);
+        $exclude_forum_ids = array_map('intval', $exclude_forum_ids);
+
+        foreach ($exclude_forum_ids as $forum_id)
+        {
+            if (isset($vbulletin->forumcache[$forum_id]) AND 
+                ($vbulletin->forumcache[$forum_id]['options'] & $vbulletin->bf_misc_forumoptions['indexposts']))
+            {
+                $vbulletin->forumcache[$forum_id]['options'] -= $vbulletin->bf_misc_forumoptions['indexposts'];
+            }
+        }
+    }
+}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
 			<title>SFF: remove list of excluded forums from search page title</title>
 			<hookname>search_complete</hookname>
 			<phpcode><![CDATA[if (isset($criteria))
@@ -238,28 +259,6 @@ $userdata->usertextfield['excludeforumids'] = implode(',', $excludeforumids);]]>
         $criteria->add_display_strings('exclude_forum', NULL);
         $display_string = array_filter($criteria->get_display_strings(), 'count');
         $this->template->register('criteriaDisplay', implode('; ', $display_string));
-    }
-}]]></phpcode>
-		</plugin>
-		<plugin active="1" executionorder="5">
-			<title>SFF: Exclude Forums From Search</title>
-			<hookname>search_start</hookname>
-			<phpcode><![CDATA[if ($_REQUEST['do'] == 'getnew')
-{
-    $vbulletin->input->clean_gpc('r', 'exclude', TYPE_NOHTML);
-
-    if (!$vbulletin->userinfo['userid'])
-    {
-        $vbulletin->userinfo['excludeforumids'] = '';
-    }
-
-    if ($vbulletin->GPC['exclude'])
-    {
-        $vbulletin->GPC['exclude'] = $vbulletin->GPC['exclude'] . ',' . $vbulletin->userinfo['excludeforumids'];
-    }
-    else
-    {
-        $vbulletin->GPC['exclude'] = $vbulletin->userinfo['excludeforumids'];
     }
 }]]></phpcode>
 		</plugin>
