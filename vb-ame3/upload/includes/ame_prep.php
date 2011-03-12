@@ -406,8 +406,24 @@ class AME_editor_prep extends  AME_prep_base
 				
 				if ($value['type'] == 'cache' || !$value['type'])
 				{
-					
-					$this->_registry->templatecache["$value[name]"] = $result = str_replace($value['search'], sprintf($value['replace'], $marked, $checked), $this->_registry->templatecache["$value[name]"]);
+                    
+                    $before_patch = $this->_registry->templatecache[$value['name']];
+                    $this->_registry->templatecache["$value[name]"] = $result = str_replace($value['search'], sprintf($value['replace'], $marked, $checked), $this->_registry->templatecache["$value[name]"]);
+                    if ($before_patch == $this->_registry->templatecache[$value['name']])
+                    {
+                        $err_message = sprintf("Product '%s', error in hook %s : can't modify template '%s'",
+                                            'AME',
+                                            'parse_templates',
+                                            $value['name']);
+                        error_log($err_message); // Send to PHP error log
+                        if ($this->_registry->debug)
+                        {
+                            trigger_error($err_message, E_USER_WARNING); // Display on page
+                            require_once(DIR . '/includes/functions_log_error.php');
+                            log_vbulletin_error($err_message, 'php'); // Send to vB error log
+                        }
+                        unset($err_message, $before_patch);
+                    }
 				
 				}
 			
