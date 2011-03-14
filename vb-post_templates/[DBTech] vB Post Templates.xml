@@ -15,6 +15,18 @@
 		<dependency dependencytype="vbulletin" minversion="4.0.2" maxversion="" />
 	</dependencies>
 	<codes>
+		<code version="*">
+			<installcode><![CDATA[if ($vbulletin->products['tms'])
+{
+	require_once(DIR . '/includes/adminfunctions_templateedits.php');
+	install_templateedits($info, $arr, $active);
+}]]></installcode>
+			<uninstallcode><![CDATA[if ($vbulletin->products['tms'])
+{
+	require_once(DIR . '/includes/adminfunctions_templateedits.php');
+	uninstall_templateedits($vbulletin->GPC['productid']);
+}]]></uninstallcode>
+		</code>
 		<code version="1.0.0">
 			<installcode><![CDATA[$db->query("CREATE TABLE `" . TABLE_PREFIX . "posttemplate` (
   `pid` int(15) NOT NULL auto_increment,
@@ -355,11 +367,44 @@ if (($pt_canuse || $pt_canusedef) && !$vbulletin->GPC['ajax'] && (THIS_SCRIPT !=
 	{
 		$pt_options = vB_Template::create('editor_posttemplates');
 		$pt_options->register('posttemplates', implode('', $posttemplates));
-		$pt_options->register('editorid', $editorid);
+        $pt_options->register('editorid', $editorid);
 
-		$vbulletin->templatecache[$editor_template_name] = str_replace('<!-- POST_TEMPLATES -->', $pt_options->render(), $vbulletin->templatecache[$editor_template_name]);
-		$vbulletin->templatecache[$editor_template_name] .= $vbulletin->templatecache['editor_posttemplates_js'];
+        $before_patch = $vbulletin->templatecache[$editor_template_name];
+        $vbulletin->templatecache[$editor_template_name] = str_replace('<!-- POST_TEMPLATES -->', $pt_options->render(), $vbulletin->templatecache[$editor_template_name]);
+        if ($before_patch == $vbulletin->templatecache[$editor_template_name])
+        {
+            $err_message = sprintf("Product '%s', error in hook %s : can't modify template '%s' first modification",
+                                'DBT vB Post Templates',
+                                'editor_toolbar_end',
+                                $editor_template_name);
+            error_log($err_message); // Send to PHP error log
+            if ($vbulletin->debug)
+            {
+                trigger_error($err_message, E_USER_WARNING); // Display on page
+                require_once(DIR . '/includes/functions_log_error.php');
+                log_vbulletin_error($err_message, 'php'); // Send to vB error log
+            }
+            unset($err_message, $before_patch);
+        }
+        $vbulletin->templatecache[$editor_template_name] .= $vbulletin->templatecache['editor_posttemplates_js'];
+
+        $before_patch = $vbulletin->templatecache[$editor_template_name];
 		$vbulletin->templatecache[$editor_template_name] = str_replace("';\$final_rendered = '", "';\$final_rendered .= '", $vbulletin->templatecache[$editor_template_name]);
+        if ($before_patch == $vbulletin->templatecache[$editor_template_name])
+        {
+            $err_message = sprintf("Product '%s', error in hook %s : can't modify template '%s' second modification",
+                                'DBT vB Post Templates',
+                                'editor_toolbar_end',
+                                $editor_template_name);
+            error_log($err_message); // Send to PHP error log
+            if ($vbulletin->debug)
+            {
+                trigger_error($err_message, E_USER_WARNING); // Display on page
+                require_once(DIR . '/includes/functions_log_error.php');
+                log_vbulletin_error($err_message, 'php'); // Send to vB error log
+            }
+            unset($err_message, $before_patch);
+        }
 	}
 }]]></phpcode>
 		</plugin>
@@ -783,4 +828,42 @@ $template_hook['usercp_navbar_bottom'] .= $templater->render();]]></phpcode>
 	</cronentries>
 	<faqentries>
 	</faqentries>
+	<templateedits>
+		<templateedit template="editor_toolbar_on" varname="editor_pt" username="Vitaly" version="4.0.6" dateline="1283676957" searchorder="5" active="1">
+			<title>Add templates chooser to editor</title>
+			<searchstr><![CDATA[				<vb:if condition="is_browser('ie') AND !is_browser('mac')">
+					<li>
+						<img src="{vb:stylevar imgdir_editor}/spelling.png" class="imagebutton" id="{vb:raw editorid}_cmd_spelling" width="20" height="20" alt="{vb:rawphrase check_spelling}" />
+					</li>
+				</vb:if>]]></searchstr>
+			<replacestr><![CDATA[				<vb:if condition="is_browser('ie') AND !is_browser('mac')">
+					<li>
+						<img src="{vb:stylevar imgdir_editor}/spelling.png" class="imagebutton" id="{vb:raw editorid}_cmd_spelling" width="20" height="20" alt="{vb:rawphrase check_spelling}" />
+					</li>
+				</vb:if>
+<!-- POST_TEMPLATES -->]]></replacestr>
+		</templateedit>
+		<templateedit template="showthread_quickreply" varname="quick_reply_pt" username="Vitaly" version="4.0.4" dateline="1283677192" searchorder="5" active="1">
+			<title>Add template chooser to quick reply</title>
+			<searchstr><![CDATA[				<vb:if condition="$show['quote_bbcode']">
+
+				<li class="editor_control_group_item">
+
+					<img src="{vb:stylevar imgdir_editor}/quote.png" class="imagebutton" id="{vb:raw editorid}_cmd_wrap0_quote" width="20" height="20" alt="{vb:rawphrase wrap_quote_tags}" />
+
+				</li>
+
+				</vb:if>]]></searchstr>
+			<replacestr><![CDATA[				<vb:if condition="$show['quote_bbcode']">
+
+				<li class="editor_control_group_item">
+
+					<img src="{vb:stylevar imgdir_editor}/quote.png" class="imagebutton" id="{vb:raw editorid}_cmd_wrap0_quote" width="20" height="20" alt="{vb:rawphrase wrap_quote_tags}" />
+
+				</li>
+
+				</vb:if>
+<!-- POST_TEMPLATES -->]]></replacestr>
+		</templateedit>
+	</templateedits>
 </product>
