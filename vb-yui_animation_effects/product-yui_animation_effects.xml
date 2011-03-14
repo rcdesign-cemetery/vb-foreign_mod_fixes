@@ -46,7 +46,23 @@ if (!isset($show['yui_animation_exists']))
 			<hookname>process_templates_complete</hookname>
 			<phpcode><![CDATA[if (THIS_SCRIPT == 'index')
 {
-	$vbulletin->templatecache['FORUMHOME'] = str_replace('<script type="text/javascript" src="\' . vB_Template_Runtime::fetchStylevar("yuipath") . \'/animation/animation-min.js?v=\' . $vboptions[\'simpleversion\'] . \'"></script>', '', $vbulletin->templatecache['FORUMHOME']);
+    $before_patch = $vbulletin->templatecache['FORUMHOME'];
+    $vbulletin->templatecache['FORUMHOME'] = str_replace('<script type="text/javascript" src="\' . vB_Template_Runtime::fetchStylevar("yuipath") . \'/animation/animation-min.js?v=\' . $vboptions[\'simpleversion\'] . \'"></script>', '', $vbulletin->templatecache['FORUMHOME']);
+    if ($before_patch == $vbulletin->templatecache['FORUMHOME'])
+    {
+        $err_message = sprintf("Product '%s', error in hook %s : can't modify template '%s'",
+                            'YUI Animation Effect',
+                            'process_templates_complete',
+                            'FORUMHOME');
+        error_log($err_message); // Send to PHP error log
+        if ($vbulletin->debug)
+        {
+            trigger_error($err_message, E_USER_WARNING); // Display on page
+            require_once(DIR . '/includes/functions_log_error.php');
+            log_vbulletin_error($err_message, 'php'); // Send to vB error log
+        }
+        unset($err_message, $before_patch);
+    }
 }]]></phpcode>
 		</plugin>
 	</plugins>
