@@ -865,5 +865,31 @@ $template_hook['usercp_navbar_bottom'] .= $templater->render();]]></phpcode>
 				</vb:if>
 <!-- POST_TEMPLATES -->]]></replacestr>
 		</templateedit>
+		<templateedit template="pm_quickreply" varname="pm_quick_reply_pt" username="varnak" version="4.0.4" dateline="1301383866" searchorder="5" active="1">
+			<title>Add template chooser to pm quick reply</title>
+			<searchstr><![CDATA[				</vb:if>
+
+				<vb:if condition="$show['quote_bbcode']">
+
+				<li>
+
+					<img src="{vb:stylevar imgdir_editor}/quote.png" class="imagebutton" id="{vb:raw editorid}_cmd_wrap0_quote" width="20" height="20" alt="{vb:rawphrase wrap_quote_tags}" />
+
+				</li>
+
+				</vb:if>]]></searchstr>
+			<replacestr><![CDATA[				</vb:if>
+
+				<vb:if condition="$show['quote_bbcode']">
+
+				<li>
+
+					<img src="{vb:stylevar imgdir_editor}/quote.png" class="imagebutton" id="{vb:raw editorid}_cmd_wrap0_quote" width="20" height="20" alt="{vb:rawphrase wrap_quote_tags}" />
+
+				</li>
+
+				</vb:if>
+<!-- POST_TEMPLATES -->]]></replacestr>
+		</templateedit>
 	</templateedits>
 </product>
